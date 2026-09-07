@@ -8,6 +8,7 @@ on:
       - 'backend/consolidar_backend.py'
       - 'backend/gerar_pacote_publicacao.py'
       - 'backend/ENCERRAMENTO_TORNEIO.gs'
+      - 'backend/CALENDARIO_REMARCACAO.gs'
 
 permissions:
   contents: write
