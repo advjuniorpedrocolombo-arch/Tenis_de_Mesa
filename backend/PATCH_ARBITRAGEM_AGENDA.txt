@@ -1,0 +1,31 @@
+PATCH – MÓDULO DE ÁRBITROS E AGENDA
+
+1) No objeto SHEETS do Code.gs, acrescente:
+ARBITROS:'ARBITROS'
+
+2) Dentro de doGet(e), antes de ACAO_INVALIDA, acrescente:
+if(a==='agendaPublica')return jsonResponse_({ok:true,jogos:listarAgendaPublica_()});
+if(a==='adminArbitros'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,arbitros:listarArbitros_()});}
+
+3) Dentro de doPost(e), antes de ACAO_INVALIDA, acrescente:
+if(a==='adminSalvarArbitro'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarArbitro_(p,s.usuario));}
+if(a==='adminStatusArbitro'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(alterarStatusArbitro_(p,s.usuario));}
+if(a==='adminSalvarAgendaJogo'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarAgendaJogo_(p,s.usuario));}
+if(a==='adminSortearArbitros'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(sortearArbitros_(p,s.usuario));}
+if(a==='adminSubstituirArbitro'){const s=exigirSessao_(p.token);return jsonResponse_(substituirArbitro_(p,s.usuario));}
+
+4) No Apps Script crie ARBITRAGEM_AGENDA.gs e copie integralmente backend/ARBITRAGEM_AGENDA.gs.
+
+5) A planilha já foi preparada com a aba ARBITROS e com os campos de arbitragem adicionados à aba JOGOS.
+
+REGRAS IMPLEMENTADAS
+- 1 árbitro por partida/mesa.
+- árbitro pode também ser participante.
+- se o árbitro possuir partida na mesma DATA, ele é inelegível para arbitrar naquele dia inteiro.
+- sorteio aleatório entre árbitros elegíveis com balanceamento da quantidade de jogos.
+- evita escala simultânea quando houver horário informado.
+- substituição exige motivo e registra árbitro originalmente escalado, árbitro real, data/hora e operador que efetuou a troca.
+- histórico registra cadastro, alterações, sorteio, agenda e substituições.
+- atletas e árbitros consultam data, horário, mesa e arbitragem em /agenda.html.
+
+6) Salve e publique NOVA VERSÃO da implantação do Web App.
