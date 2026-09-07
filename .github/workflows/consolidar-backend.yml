@@ -1,0 +1,160 @@
+name: Consolidar backend final
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/consolidar-backend.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  consolidar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Consolidar Code.gs e encerramento
+        shell: python
+        run: |
+          from pathlib import Path
+
+          code_path = Path('backend/Code.gs')
+          text = code_path.read_text(encoding='utf-8')
+
+          old_sheets = "const SHEETS={CONFIG:'CONFIGURACOES',PARTICIPANTES:'PARTICIPANTES',OPERADORES:'OPERADORES',GRUPOS:'GRUPOS',JOGOS:'JOGOS',CLASSIFICACAO:'CLASSIFICACAO',MATA_MATA:'MATA_MATA',HISTORICO:'HISTORICO'};"
+          new_sheets = "const SHEETS={CONFIG:'CONFIGURACOES',PARTICIPANTES:'PARTICIPANTES',OPERADORES:'OPERADORES',GRUPOS:'GRUPOS',JOGOS:'JOGOS',CLASSIFICACAO:'CLASSIFICACAO',MATA_MATA:'MATA_MATA',HISTORICO:'HISTORICO',ARBITROS:'ARBITROS',CALENDARIO:'CALENDARIO'};"
+          if old_sheets in text:
+              text = text.replace(old_sheets, new_sheets, 1)
+
+          new_get = r'''function doGet(e){
+  try{
+    const a=String((e&&e.parameter&&e.parameter.action)||'status').trim();
+    if(a==='status')return jsonResponse_(obterEstadoInscricoesCronograma_());
+    if(a==='participantesPublicos')return jsonResponse_({ok:true,participantes:listarParticipantesPublicos_()});
+    if(a==='torneioPublico')return jsonResponse_({ok:true,jogos:listarJogos_(),classificacao:listarClassificacao_(),grupos:listarGruposPublicos_(),fasesGrupos:listarEstadosFasesGrupos_(),mataMata:listarMataMata_()});
+    if(a==='agendaPublica')return jsonResponse_({ok:true,jogos:listarAgendaPublicaV2_()});
+    if(a==='adminSessao')return jsonResponse_(adminSessao_(e.parameter.token));
+    if(a==='participantesAdmin'){const s=exigirSessao_(e.parameter.token);return jsonResponse_({ok:true,usuario:s.usuario,participantes:listarParticipantesAdmin_()});}
+    if(a==='adminOperadores'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,operadores:listarOperadores_()});}
+    if(a==='sorteioEstado'){const s=exigirSessao_(e.parameter.token);return jsonResponse_({ok:true,usuario:s.usuario,estado:obterEstadoSorteio_(e.parameter.categoria)});}
+    if(a==='jogosAdmin'){const s=exigirSessao_(e.parameter.token);return jsonResponse_({ok:true,usuario:s.usuario,jogos:listarJogos_(),classificacao:listarClassificacao_(),grupos:listarGruposPublicos_(),fasesGrupos:listarEstadosFasesGrupos_(),mataMata:listarMataMata_()});}
+    if(a==='adminEncerramentoEstado'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(obterEstadoEncerramento_());}
+    if(a==='adminArbitros'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,arbitros:listarArbitros_()});}
+    if(a==='adminCalendario'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,datas:listarCalendario_()});}
+    if(a==='adminConflitosAgenda'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(listarConflitosAgenda_());}
+    if(a==='adminPlanejamento'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(obterEstadoInscricoesCronograma_());}
+    return jsonResponse_({ok:false,erro:'ACAO_INVALIDA'});
+  }catch(err){return erroJson_(err);}
+}
+'''
+
+          new_post = r'''function doPost(e){
+  const lock=LockService.getScriptLock();
+  try{
+    lock.waitLock(10000);
+    const p=parsePayload_(e),a=String(p.action||'inscricao').trim();
+    if(a==='inscricao')return jsonResponse_(registrarInscricao_(p));
+    if(a==='adminLogin')return jsonResponse_(adminLogin_(p));
+    if(a==='adminLogout')return jsonResponse_(adminLogout_(p.token));
+    if(a==='adminSolicitarRecuperacao')return jsonResponse_(solicitarRecuperacaoPin_(p));
+    if(a==='adminRedefinirPin')return jsonResponse_(redefinirPinRecuperacao_(p));
+    if(a==='adminAtualizarParticipante'){const s=exigirSessao_(p.token);return jsonResponse_(adminAtualizarParticipante_(p,s.usuario));}
+    if(a==='adminSalvarOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminSalvarOperador_(p,s.usuario));}
+    if(a==='adminStatusOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminStatusOperador_(p,s.usuario));}
+    if(a==='adminDefinirCabeca'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminDefinirCabeca_(p,s.usuario));}
+    if(a==='sorteioIniciar'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(iniciarSorteio_(p,s.usuario));}
+    if(a==='sorteioAdicionar'){const s=exigirSessao_(p.token);return jsonResponse_(adicionarAoGrupo_(p,s.usuario));}
+    if(a==='sorteioRemover'){const s=exigirSessao_(p.token);return jsonResponse_(removerDoGrupo_(p,s.usuario));}
+    if(a==='sorteioFinalizar'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(finalizarSorteio_(p,s.usuario));}
+    if(a==='sorteioReiniciar'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(reiniciarSorteio_(p,s.usuario));}
+    if(a==='jogoSalvarResultado'){const s=exigirSessao_(p.token);return jsonResponse_(salvarResultadoJogo_(p,s.usuario));}
+    if(a==='faseGruposEncerrar'){const s=exigirSessao_(p.token);return jsonResponse_(encerrarFaseGrupos_(p,s.usuario));}
+    if(a==='faseGruposReabrir'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(reabrirFaseGrupos_(p,s.usuario));}
+    if(a==='salvarConfigCategoria'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarConfigCategoria_(p,s.usuario));}
+    if(a==='adminArquivarTorneio'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminArquivarTorneio_(p,s.usuario));}
+    if(a==='adminResetarTorneio'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminResetarTorneio_(p,s.usuario));}
+    if(a==='adminSalvarArbitro'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarArbitro_(p,s.usuario));}
+    if(a==='adminStatusArbitro'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(alterarStatusArbitro_(p,s.usuario));}
+    if(a==='adminSalvarAgendaJogo'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarAgendaJogoComConflitos_(p,s.usuario));}
+    if(a==='adminSortearArbitros'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(sortearArbitros_(p,s.usuario));}
+    if(a==='adminSubstituirArbitro'){const s=exigirSessao_(p.token);return jsonResponse_(substituirArbitro_(p,s.usuario));}
+    if(a==='adminSalvarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarDataCalendario_(p,s.usuario));}
+    if(a==='adminDesativarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(desativarDataCalendario_(p,s.usuario));}
+    if(a==='adminCancelarPartidaForcaMaior'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(cancelarPartidaForcaMaior_(p,s.usuario));}
+    if(a==='adminRemarcarPartida'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(remarcarPartida_(p,s.usuario));}
+    if(a==='adminBloquearDataEmMassa'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(bloquearDataEmMassa_(p,s.usuario));}
+    if(a==='adminSalvarPlanejamento'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarPlanejamentoInscricoes_(p,s.usuario));}
+    if(a==='adminEncerrarInscricoes'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(encerrarInscricoesAgora_(p,s.usuario));}
+    if(a==='adminReabrirInscricoes'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(reabrirInscricoes_(p,s.usuario));}
+    return jsonResponse_({ok:false,erro:'ACAO_INVALIDA'});
+  }catch(err){return erroJson_(err);}
+  finally{try{lock.releaseLock()}catch(_){}}
+}
+'''
+
+          a = text.index('function doGet(e){')
+          b = text.index('\nfunction doPost(e){', a)
+          text = text[:a] + new_get + text[b+1:]
+          a = text.index('function doPost(e){')
+          b = text.index('\nfunction adminLogin_(p){', a)
+          text = text[:a] + new_post + text[b+1:]
+
+          old_check = "  if(String(getConfig_('STATUS_INSCRICOES')||'').toUpperCase()!=='ABERTAS')return {ok:false,erro:'INSCRICOES_ENCERRADAS',mensagem:'As inscrições não estão abertas neste momento.'};"
+          new_check = "  const liberacao=validarInscricoesAbertas_();if(!liberacao.ok)return liberacao;"
+          if old_check in text:
+              text = text.replace(old_check, new_check, 1)
+
+          fs = text.index('function salvarResultadoJogo_(d,usuario){')
+          fe = text.index('\nfunction montarResultado_', fs)
+          bloco = text[fs:fe]
+          if 'validarJogoPodeReceberResultado_' not in bloco:
+              pos = bloco.find('\n', bloco.find("const id="))
+              bloco = bloco[:pos+1] + "  const liberacaoAgenda=validarJogoPodeReceberResultado_(id);if(!liberacaoAgenda.ok)return liberacaoAgenda;\n" + bloco[pos+1:]
+          if 'TERCEIRO_LUGAR_PENDENTE' not in bloco:
+              alvo = "  const r=sh.getRange(linha,1,1,h.length).getValues()[0],fase=String(r[idx.FASE]||''),categoria=String(r[idx.CATEGORIA]||''),statusAnterior=String(r[idx.STATUS]||''),melhorDe=melhorDePorFase_(fase);\n"
+              guarda = "  if(fase==='FINAL'){const terceiro=listarJogos_().find(j=>j.categoria===categoria&&String(j.fase).toUpperCase()==='TERCEIRO_LUGAR');if(terceiro&&terceiro.status!=='FINALIZADO')return {ok:false,erro:'TERCEIRO_LUGAR_PENDENTE',mensagem:'A disputa de 3º lugar deve ser realizada antes da final.'};}\n"
+              if alvo not in bloco:
+                  raise SystemExit('Linha-base da guarda da final não encontrada.')
+              bloco = bloco.replace(alvo, alvo + guarda, 1)
+          text = text[:fs] + bloco + text[fe:]
+          code_path.write_text(text, encoding='utf-8')
+
+          # Exigir data, horário e mesa completos antes do sorteio de árbitros.
+          arb_path = Path('backend/ARBITRAGEM_AGENDA.gs')
+          arb = arb_path.read_text(encoding='utf-8')
+          old = "  const jogos=lerJogosArbitragem_().filter(j=>j.status!=='FINALIZADO'&&j.data),arbitros=listarArbitros_().filter(a=>a.status==='ATIVO');"
+          new = "  const jogos=lerJogosArbitragem_().filter(j=>j.status!=='FINALIZADO'&&j.status!=='CANCELADA_PARA_REMARCACAO'&&j.data&&j.horario&&j.mesa),arbitros=listarArbitros_().filter(a=>a.status==='ATIVO');"
+          if old in arb:
+              arb = arb.replace(old, new, 1)
+              arb = arb.replace("if(!jogos.length)return {ok:false,erro:'SEM_JOGOS_AGENDADOS',mensagem:'Não existem partidas pendentes com data definida.'};", "if(!jogos.length)return {ok:false,erro:'SEM_JOGOS_AGENDADOS',mensagem:'Não existem partidas pendentes com data, horário e mesa completamente definidos.'};", 1)
+          arb_path.write_text(arb, encoding='utf-8')
+
+          # Integrar ARBITROS e CALENDARIO ao pacote, fingerprint e reset mestre.
+          enc_path = Path('backend/ENCERRAMENTO_TORNEIO.gs')
+          enc = enc_path.read_text(encoding='utf-8')
+          if 'arquivarExtrasOperacionais_(ss,pasta)' not in enc:
+              enc = enc.replace("  criarPdfAba_(ss,'HISTORICO',pasta,'08_Historico.pdf');", "  criarPdfAba_(ss,'HISTORICO',pasta,'08_Historico.pdf');\n  if(typeof arquivarExtrasOperacionais_==='function')arquivarExtrasOperacionais_(ss,pasta);", 1)
+          if 'limparExtrasNovaEdicao_()' not in enc:
+              enc = enc.replace("  limparAbaMantendoCabecalho_('HISTORICO');", "  limparAbaMantendoCabecalho_('HISTORICO');\n  if(typeof limparExtrasNovaEdicao_==='function')limparExtrasNovaEdicao_();", 1)
+          enc = enc.replace("  return ['PARTICIPANTES','GRUPOS','JOGOS','CLASSIFICACAO','MATA_MATA'].some", "  return ['PARTICIPANTES','GRUPOS','JOGOS','CLASSIFICACAO','MATA_MATA','ARBITROS','CALENDARIO'].some", 1)
+          if 'fingerprintExtrasOperacionais_' not in enc:
+              enc = enc.replace("  return hashTexto_(partes.join('\\n'));", "  const extras=typeof fingerprintExtrasOperacionais_==='function'?fingerprintExtrasOperacionais_():'';\n  return hashTexto_(partes.join('\\n')+'\\n'+extras);", 1)
+          if "DATA_HORA_ENCERRAMENTO_INSCRICOES" not in enc:
+              enc = enc.replace("  setConfig_('DATA_FINAL_PREVISTA','A DEFINIR','Data final prevista');", "  setConfig_('DATA_FINAL_PREVISTA','A DEFINIR','Data final prevista');\n  setConfig_('DATA_HORA_ENCERRAMENTO_INSCRICOES','','Data e hora limite das inscrições');\n  setConfig_('DATA_SORTEIO_GRUPOS','','Data pública prevista para o sorteio dos grupos');", 1)
+          enc_path.write_text(enc, encoding='utf-8')
+
+      - name: Commitar consolidação
+        run: |
+          if git diff --quiet; then
+            echo 'Nenhuma alteração necessária.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backend/Code.gs backend/ARBITRAGEM_AGENDA.gs backend/ENCERRAMENTO_TORNEIO.gs
+          git commit -m 'Consolidar backend final do Apps Script'
+          git push
