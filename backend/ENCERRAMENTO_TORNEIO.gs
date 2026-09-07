@@ -18,6 +18,8 @@ function obterEstadoEncerramento_(){
 }
 
 function adminArquivarTorneio_(p,usuario){
+  const etapa=String(p.etapa||'PREPARAR').trim().toUpperCase();
+  if(etapa==='CONFIRMAR')return confirmarArquivamentoLocalInterno_(p,usuario);
   if(!temDadosOperacionais_())return {ok:false,erro:'SEM_DADOS',mensagem:'Não há dados operacionais para arquivar.'};
   const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
   SpreadsheetApp.flush();
@@ -47,12 +49,26 @@ function adminArquivarTorneio_(p,usuario){
     partidasFinalizadas:jogos.filter(x=>x.status==='FINALIZADO').length,
     categorias:categoriasPermitidas_()
   };
+  CacheService.getScriptCache().put('ARQ_LOCAL_'+idArquivo,JSON.stringify({fingerprint,usuario:usuario.email,nomeArquivo}),600);
+  return {ok:true,mensagem:'Pacote preparado. O navegador irá gerar o arquivo ZIP.',idArquivo,nomeArquivo,fingerprint,dados,resumo};
+}
+
+function confirmarArquivamentoLocalInterno_(p,usuario){
+  const idArquivo=String(p.idArquivo||'').trim();
+  if(!idArquivo)return {ok:false,erro:'ID_ARQUIVO_OBRIGATORIO',mensagem:'Identificador do arquivo ausente.'};
+  const cache=CacheService.getScriptCache(),chave='ARQ_LOCAL_'+idArquivo,raw=cache.get(chave);
+  if(!raw)return {ok:false,erro:'ARQUIVO_EXPIRADO',mensagem:'A confirmação do ZIP expirou. Gere o arquivo novamente.'};
+  const pendente=JSON.parse(raw);
+  if(String(pendente.usuario||'').toLowerCase()!==String(usuario.email||'').toLowerCase())return {ok:false,erro:'USUARIO_DIVERGENTE',mensagem:'Este pacote foi gerado por outro administrador.'};
+  const atual=gerarFingerprintTorneio_();
+  if(atual!==pendente.fingerprint)return {ok:false,erro:'DADOS_ALTERADOS',mensagem:'Os dados mudaram durante a geração do ZIP. Gere o arquivo novamente.'};
   setConfig_('ULTIMO_ARQUIVAMENTO_ID',idArquivo,'Identificador do último arquivamento concluído pelo sistema');
-  setConfig_('ULTIMO_ARQUIVAMENTO_NOME',nomeArquivo,'Nome do último arquivo ZIP gerado localmente');
+  setConfig_('ULTIMO_ARQUIVAMENTO_NOME',pendente.nomeArquivo,'Nome do último arquivo ZIP gerado localmente');
   setConfig_('ULTIMO_ARQUIVAMENTO_PASTA_URL','','Arquivamento local: não há pasta obrigatória no Drive');
-  setConfig_('ULTIMO_ARQUIVAMENTO_FINGERPRINT',fingerprint,'Assinatura dos dados operacionais no momento do arquivamento');
-  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'TORNEIO_ARQUIVADO_LOCAL',entidade:'TORNEIO',idRegistro:idArquivo,valorAnterior:'',valorNovo:nomeArquivo,observacoes:'Pacote ZIP preparado para download local pelo navegador.'});
-  return {ok:true,mensagem:'Pacote preparado. O navegador irá baixar o arquivo ZIP.',idArquivo,nomeArquivo,fingerprint,dados,resumo};
+  setConfig_('ULTIMO_ARQUIVAMENTO_FINGERPRINT',pendente.fingerprint,'Assinatura dos dados operacionais no momento do arquivamento');
+  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'TORNEIO_ARQUIVADO_LOCAL',entidade:'TORNEIO',idRegistro:idArquivo,valorAnterior:'',valorNovo:pendente.nomeArquivo,observacoes:'Pacote ZIP gerado no navegador e confirmado pelo administrador.'});
+  cache.remove(chave);
+  return {ok:true,mensagem:'ZIP registrado com sucesso. O reset seguro foi liberado.',idArquivo,nomeArquivo:pendente.nomeArquivo};
 }
 
 function adminResetarTorneio_(p,usuario){
