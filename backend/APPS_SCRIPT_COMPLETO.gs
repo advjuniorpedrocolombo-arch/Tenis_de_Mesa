@@ -5,7 +5,7 @@
  *
  * IMPORTANTE: no Apps Script, este arquivo pode substituir integralmente o Code.gs atual.
  * Não copie os módulos separados se utilizar este pacote único, para evitar funções duplicadas.
- * Após colar o código, execute autorizarBackend_() uma única vez no editor antes de implantar.
+ * O arquivamento da edição é gerado como ZIP pelo navegador e não depende do Google Drive.
  */
 
 
@@ -767,11 +767,9 @@ function bloquearDataEmMassa_(p,usuario){
 // INÍCIO: ENCERRAMENTO_TORNEIO.gs
 // ============================================================
 
-const ARQUIVO_PDF_OPCOES_='export?format=pdf&size=A4&portrait=true&fitw=true&sheetnames=false&printtitle=false&pagenumbers=true&gridlines=false&fzr=true';
-
 function obterEstadoEncerramento_(){
   const ultimoId=String(getConfig_('ULTIMO_ARQUIVAMENTO_ID')||'');
-  const pastaUrl=String(getConfig_('ULTIMO_ARQUIVAMENTO_PASTA_URL')||'');
+  const ultimoNome=String(getConfig_('ULTIMO_ARQUIVAMENTO_NOME')||'');
   const salvo=String(getConfig_('ULTIMO_ARQUIVAMENTO_FINGERPRINT')||'');
   const atual=gerarFingerprintTorneio_();
   const exigir=String(getConfig_('EXIGIR_ARQUIVAMENTO_ANTES_RESET')||'TRUE').toUpperCase()!=='FALSE';
@@ -780,48 +778,66 @@ function obterEstadoEncerramento_(){
     ok:true,
     temDados,
     ultimoArquivamentoId:ultimoId,
-    ultimoArquivamentoPastaUrl:pastaUrl,
+    ultimoArquivamentoNome:ultimoNome,
     arquivadoSemAlteracoes:!!salvo&&salvo===atual,
     podeResetar:temDados&&(!exigir||(!!salvo&&salvo===atual)),
     exigeArquivamento:exigir,
-    mensagem:!temDados?'Não há dados operacionais para encerrar.':(!salvo?'Este estado ainda não foi arquivado.':(salvo===atual?'Os dados atuais estão arquivados e protegidos.':'Houve alterações após o último arquivamento. Arquive novamente antes de resetar.'))
+    mensagem:!temDados?'Não há dados operacionais para encerrar.':(!salvo?'Este estado ainda não foi arquivado.':(salvo===atual?'Os dados atuais estão arquivados e protegidos.':'Houve alterações após o último arquivamento. Gere um novo ZIP antes de resetar.'))
   };
 }
 
 function adminArquivarTorneio_(p,usuario){
+  const etapa=String(p.etapa||'PREPARAR').trim().toUpperCase();
+  if(etapa==='CONFIRMAR')return confirmarArquivamentoLocalInterno_(p,usuario);
   if(!temDadosOperacionais_())return {ok:false,erro:'SEM_DADOS',mensagem:'Não há dados operacionais para arquivar.'};
   const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
   SpreadsheetApp.flush();
-  const parentId=String(getConfig_('PASTA_TORNEIOS_ARQUIVADOS_ID')||'').trim();
-  if(!parentId)throw new Error('PASTA_ARQUIVO_NAO_CONFIGURADA|Configure PASTA_TORNEIOS_ARQUIVADOS_ID antes de arquivar.');
-  const parent=DriveApp.getFolderById(parentId);
-  const agora=new Date();
-  const tz=Session.getScriptTimeZone()||'America/Sao_Paulo';
+  const agora=new Date(),tz=Session.getScriptTimeZone()||'America/Sao_Paulo';
   const stamp=Utilities.formatDate(agora,tz,'yyyy-MM-dd_HH-mm-ss');
-  const ano=Utilities.formatDate(agora,tz,'yyyy');
   const nomeTorneio=String(getConfig_('NOME_TORNEIO')||'Torneio de Tênis de Mesa');
-  const nomePasta=ano+' – '+nomeTorneio+' – Encerramento – '+stamp;
-  const pasta=parent.createFolder(nomePasta);
+  const nomeArquivo='Arquivo_Torneio_'+slugArquivoLocal_(nomeTorneio)+'_'+stamp+'.zip';
   const idArquivo='ARQ-'+Utilities.formatDate(agora,tz,'yyyyMMddHHmmss')+'-'+Math.floor(1000+Math.random()*9000);
-
-  DriveApp.getFileById(SPREADSHEET_ID).makeCopy('Banco de Dados – '+nomeTorneio+' – '+stamp,pasta);
-  criarPdfPlanilhaCompleta_(ss,pasta,'09_Banco_Completo.pdf');
-  criarPdfAba_(ss,'GRUPOS',pasta,'04_Fase_de_Grupos.pdf');
-  criarPdfAba_(ss,'CLASSIFICACAO',pasta,'04B_Classificacao_Fase_de_Grupos.pdf');
-  criarPdfAba_(ss,'MATA_MATA',pasta,'05_Mata_Mata.pdf');
-  criarPdfAba_(ss,'PARTICIPANTES',pasta,'06_Participantes.pdf');
-  criarPdfAba_(ss,'JOGOS',pasta,'07_Partidas.pdf');
-  criarPdfAba_(ss,'HISTORICO',pasta,'08_Historico.pdf');
-  if(typeof arquivarExtrasOperacionais_==='function')arquivarExtrasOperacionais_(ss,pasta);
-  criarRelatorioGeralPdf_(pasta,nomeTorneio,agora);
-  categoriasPermitidas_().forEach((cat,i)=>criarResultadoCategoriaPdf_(pasta,cat,(i===0?'02':'03')+'_Resultado_'+slugArquivo_(cat)+'.pdf'));
-
   const fingerprint=gerarFingerprintTorneio_();
+  const abas=['CONFIGURACOES','PARTICIPANTES','GRUPOS','CLASSIFICACAO','JOGOS','MATA_MATA','ARBITROS','CALENDARIO','HISTORICO','RANKING'];
+  const dados={};
+  abas.forEach(nome=>{
+    const sh=ss.getSheetByName(nome);
+    if(!sh){dados[nome]=[];return;}
+    const lr=sh.getLastRow(),lc=sh.getLastColumn();
+    dados[nome]=(lr&&lc)?sh.getRange(1,1,lr,lc).getDisplayValues():[];
+  });
+  const participantes=obterParticipantesValidos_().filter(x=>x.ativo&&x.statusInscricao==='APROVADO');
+  const jogos=listarJogos_();
+  const resumo={
+    nomeTorneio,
+    geradoEm:Utilities.formatDate(agora,tz,'dd/MM/yyyy HH:mm:ss'),
+    idArquivo,
+    fingerprint,
+    participantesAprovados:participantes.length,
+    partidasRegistradas:jogos.length,
+    partidasFinalizadas:jogos.filter(x=>x.status==='FINALIZADO').length,
+    categorias:categoriasPermitidas_()
+  };
+  CacheService.getScriptCache().put('ARQ_LOCAL_'+idArquivo,JSON.stringify({fingerprint,usuario:usuario.email,nomeArquivo}),600);
+  return {ok:true,mensagem:'Pacote preparado. O navegador irá gerar o arquivo ZIP.',idArquivo,nomeArquivo,fingerprint,dados,resumo};
+}
+
+function confirmarArquivamentoLocalInterno_(p,usuario){
+  const idArquivo=String(p.idArquivo||'').trim();
+  if(!idArquivo)return {ok:false,erro:'ID_ARQUIVO_OBRIGATORIO',mensagem:'Identificador do arquivo ausente.'};
+  const cache=CacheService.getScriptCache(),chave='ARQ_LOCAL_'+idArquivo,raw=cache.get(chave);
+  if(!raw)return {ok:false,erro:'ARQUIVO_EXPIRADO',mensagem:'A confirmação do ZIP expirou. Gere o arquivo novamente.'};
+  const pendente=JSON.parse(raw);
+  if(String(pendente.usuario||'').toLowerCase()!==String(usuario.email||'').toLowerCase())return {ok:false,erro:'USUARIO_DIVERGENTE',mensagem:'Este pacote foi gerado por outro administrador.'};
+  const atual=gerarFingerprintTorneio_();
+  if(atual!==pendente.fingerprint)return {ok:false,erro:'DADOS_ALTERADOS',mensagem:'Os dados mudaram durante a geração do ZIP. Gere o arquivo novamente.'};
   setConfig_('ULTIMO_ARQUIVAMENTO_ID',idArquivo,'Identificador do último arquivamento concluído pelo sistema');
-  setConfig_('ULTIMO_ARQUIVAMENTO_PASTA_URL',pasta.getUrl(),'Link da última pasta de arquivamento criada automaticamente');
-  setConfig_('ULTIMO_ARQUIVAMENTO_FINGERPRINT',fingerprint,'Assinatura dos dados operacionais no momento do arquivamento');
-  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'TORNEIO_ARQUIVADO',entidade:'TORNEIO',idRegistro:idArquivo,valorAnterior:'',valorNovo:pasta.getUrl(),observacoes:'Pacote completo de encerramento criado antes do reset.'});
-  return {ok:true,mensagem:'Torneio arquivado com sucesso. O reset seguro foi liberado.',idArquivo,pastaUrl:pasta.getUrl(),pastaNome:nomePasta};
+  setConfig_('ULTIMO_ARQUIVAMENTO_NOME',pendente.nomeArquivo,'Nome do último arquivo ZIP gerado localmente');
+  setConfig_('ULTIMO_ARQUIVAMENTO_PASTA_URL','','Arquivamento local: não há pasta obrigatória no Drive');
+  setConfig_('ULTIMO_ARQUIVAMENTO_FINGERPRINT',pendente.fingerprint,'Assinatura dos dados operacionais no momento do arquivamento');
+  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'TORNEIO_ARQUIVADO_LOCAL',entidade:'TORNEIO',idRegistro:idArquivo,valorAnterior:'',valorNovo:pendente.nomeArquivo,observacoes:'Pacote ZIP gerado no navegador e confirmado pelo administrador.'});
+  cache.remove(chave);
+  return {ok:true,mensagem:'ZIP registrado com sucesso. O reset seguro foi liberado.',idArquivo,nomeArquivo:pendente.nomeArquivo};
 }
 
 function adminResetarTorneio_(p,usuario){
@@ -833,9 +849,9 @@ function adminResetarTorneio_(p,usuario){
   if(!op||op.nivel!=='ADMINISTRADOR'||op.status!=='ATIVO'||hashPin_(op.pinSalt,pin)!==op.pinHash)return {ok:false,erro:'PIN_INVALIDO',mensagem:'PIN do administrador inválido.'};
   const estado=obterEstadoEncerramento_();
   if(!estado.temDados)return {ok:false,erro:'SEM_DADOS',mensagem:'O torneio já está sem dados operacionais.'};
-  if(estado.exigeArquivamento&&!estado.arquivadoSemAlteracoes)return {ok:false,erro:'ARQUIVAMENTO_OBRIGATORIO',mensagem:'Os dados atuais não estão protegidos por um arquivamento idêntico. Arquive novamente antes de resetar.'};
+  if(estado.exigeArquivamento&&!estado.arquivadoSemAlteracoes)return {ok:false,erro:'ARQUIVAMENTO_OBRIGATORIO',mensagem:'Os dados atuais não estão protegidos por um ZIP correspondente. Gere o arquivo novamente antes de resetar.'};
 
-  const pastaUrl=estado.ultimoArquivamentoPastaUrl;
+  const arquivoAnterior=estado.ultimoArquivamentoNome||estado.ultimoArquivamentoId;
   limparAbaMantendoCabecalho_('PARTICIPANTES');
   limparAbaMantendoCabecalho_('GRUPOS');
   limparAbaMantendoCabecalho_('JOGOS');
@@ -850,10 +866,11 @@ function adminResetarTorneio_(p,usuario){
   setConfig_('DATA_HORA_ENCERRAMENTO_INSCRICOES','','Data e hora limite das inscrições');
   setConfig_('DATA_SORTEIO_GRUPOS','','Data pública prevista para o sorteio dos grupos');
   setConfig_('ULTIMO_ARQUIVAMENTO_ID','','Identificador do último arquivamento concluído pelo sistema');
-  setConfig_('ULTIMO_ARQUIVAMENTO_PASTA_URL','','Link da última pasta de arquivamento criada automaticamente');
+  setConfig_('ULTIMO_ARQUIVAMENTO_NOME','','Nome do último arquivo ZIP gerado localmente');
+  setConfig_('ULTIMO_ARQUIVAMENTO_PASTA_URL','','Arquivamento local: não há pasta obrigatória no Drive');
   setConfig_('ULTIMO_ARQUIVAMENTO_FINGERPRINT','','Assinatura dos dados operacionais no momento do arquivamento');
-  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'TORNEIO_RESETADO',entidade:'TORNEIO',idRegistro:gerarId_('RESET'),valorAnterior:pastaUrl,valorNovo:'NOVO_CICLO',observacoes:'Reset mestre executado após arquivamento validado. Usuários, operadores, configurações e ranking preservados.'});
-  return {ok:true,mensagem:'Reset concluído. O sistema está pronto para uma nova edição.',arquivoAnteriorUrl:pastaUrl};
+  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'TORNEIO_RESETADO',entidade:'TORNEIO',idRegistro:gerarId_('RESET'),valorAnterior:arquivoAnterior,valorNovo:'NOVO_CICLO',observacoes:'Reset mestre executado após arquivamento local validado. Usuários, operadores, configurações e ranking preservados.'});
+  return {ok:true,mensagem:'Reset concluído. O sistema está pronto para uma nova edição.',arquivoAnterior};
 }
 
 function temDadosOperacionais_(){
@@ -877,81 +894,7 @@ function limparAbaMantendoCabecalho_(nome){
   const max=sh.getMaxRows(),cols=sh.getLastColumn();if(max>1&&cols>0)sh.getRange(2,1,max-1,cols).clearContent();
 }
 
-function criarPdfPlanilhaCompleta_(ss,pasta,nome){
-  const url='https://docs.google.com/spreadsheets/d/'+ss.getId()+'/'+ARQUIVO_PDF_OPCOES_;
-  const blob=buscarPdf_(url).setName(nome);pasta.createFile(blob);
-}
-function criarPdfAba_(ss,nomeAba,pasta,nomeArquivo){
-  const sh=ss.getSheetByName(nomeAba);if(!sh)return;
-  const url='https://docs.google.com/spreadsheets/d/'+ss.getId()+'/'+ARQUIVO_PDF_OPCOES_+'&gid='+sh.getSheetId();
-  pasta.createFile(buscarPdf_(url).setName(nomeArquivo));
-}
-function buscarPdf_(url){
-  const tokenOAuth=ScriptApp.getOAuthToken();
-  if(!tokenOAuth)throw new Error('ERRO_OAUTH|Não foi possível obter o token OAuth do Apps Script. Execute autorizarBackend_() no editor e publique uma nova versão.');
-  const r=UrlFetchApp.fetch(url,{
-    method:'get',
-    headers:{Authorization:'Bearer '+tokenOAuth},
-    followRedirects:true,
-    muteHttpExceptions:true
-  });
-  const codigo=r.getResponseCode();
-  if(codigo!==200){
-    const detalhe=String(r.getContentText()||'').replace(/\s+/g,' ').slice(0,350);
-    throw new Error('ERRO_PDF|Não foi possível gerar um dos PDFs do encerramento. Código '+codigo+(detalhe?' | '+detalhe:''));
-  }
-  return r.getBlob().setContentType('application/pdf');
-}
-
-function criarRelatorioGeralPdf_(pasta,nomeTorneio,data){
-  const doc=DocumentApp.create('TEMP Relatório Geral');
-  const body=doc.getBody(),tz=Session.getScriptTimeZone()||'America/Sao_Paulo';
-  body.appendParagraph('RELATÓRIO GERAL DO TORNEIO').setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  body.appendParagraph(nomeTorneio);
-  body.appendParagraph('Encerramento: '+Utilities.formatDate(data,tz,'dd/MM/yyyy HH:mm:ss'));
-  const participantes=obterParticipantesValidos_().filter(x=>x.ativo&&x.statusInscricao==='APROVADO');
-  const jogos=listarJogos_();
-  body.appendParagraph('Participantes aprovados: '+participantes.length);
-  body.appendParagraph('Partidas registradas: '+jogos.length);
-  body.appendParagraph('Partidas finalizadas: '+jogos.filter(x=>x.status==='FINALIZADO').length);
-  categoriasPermitidas_().forEach(cat=>{
-    body.appendParagraph(cat).setHeading(DocumentApp.ParagraphHeading.HEADING2);
-    body.appendParagraph('Participantes: '+participantes.filter(x=>(x.categoriaValidada||x.categoriaEscolhida)===cat).length);
-    const final=listarMataMata_().find(x=>x.categoria===cat&&x.fase==='FINAL'&&x.status==='FINALIZADO');
-    if(final)body.appendParagraph('Campeão: '+(final.vencedor||'—'));
-  });
-  doc.saveAndClose();
-  const f=DriveApp.getFileById(doc.getId());pasta.createFile(f.getAs(MimeType.PDF).setName('01_Relatorio_Geral.pdf'));f.setTrashed(true);
-}
-
-function criarResultadoCategoriaPdf_(pasta,categoria,nomeArquivo){
-  const ranking=classificacaoFinalCategoria_(categoria);
-  const doc=DocumentApp.create('TEMP Resultado '+categoria),body=doc.getBody();
-  body.appendParagraph('RESULTADO FINAL – '+String(categoria).toUpperCase()).setHeading(DocumentApp.ParagraphHeading.HEADING1);
-  if(!ranking.length)body.appendParagraph('Não há classificação final disponível.');
-  else{
-    body.appendParagraph('PÓDIO / DESTAQUES').setHeading(DocumentApp.ParagraphHeading.HEADING2);
-    ranking.slice(0,4).forEach(x=>body.appendParagraph(x.posicao+'º lugar — '+x.nome));
-    body.appendParagraph('CLASSIFICAÇÃO GERAL').setHeading(DocumentApp.ParagraphHeading.HEADING2);
-    const dados=[['Posição','Participante','Grupo','Fase / critério']].concat(ranking.map(x=>[String(x.posicao),x.nome,x.grupo||'—',x.fase||'Fase de grupos']));
-    body.appendTable(dados);
-  }
-  doc.saveAndClose();const f=DriveApp.getFileById(doc.getId());pasta.createFile(f.getAs(MimeType.PDF).setName(nomeArquivo));f.setTrashed(true);
-}
-
-function classificacaoFinalCategoria_(categoria){
-  const classif=listarClassificacao_().filter(x=>x.categoria===categoria),mm=listarMataMata_().filter(x=>x.categoria===categoria),map={};
-  classif.forEach(x=>map[x.id]={id:x.id,nome:x.nome,grupo:x.grupo,posGrupo:x.posicao,vitorias:x.vitorias,saldoSets:x.saldoSets,saldoPontos:x.saldoPontos,setsPro:x.setsPro,pontosPro:x.pontosPro,nivel:0,fase:'Fase de grupos'});
-  mm.forEach(x=>{[x.idA,x.idB].forEach((id,k)=>{if(id&&!map[id])map[id]={id,nome:k===0?x.jogadorA:x.jogadorB,grupo:'',posGrupo:999,vitorias:0,saldoSets:0,saldoPontos:0,setsPro:0,pontosPro:0,nivel:0,fase:'Mata-mata'};});});
-  const final=mm.find(x=>x.fase==='FINAL'&&x.status==='FINALIZADO'),terc=mm.find(x=>x.fase==='TERCEIRO_LUGAR'&&x.status==='FINALIZADO');
-  if(final){if(final.idVencedor&&map[final.idVencedor]){map[final.idVencedor].nivel=100;map[final.idVencedor].fase='Campeão';}if(final.idPerdedor&&map[final.idPerdedor]){map[final.idPerdedor].nivel=90;map[final.idPerdedor].fase='Vice-campeão';}}
-  if(terc){if(terc.idVencedor&&map[terc.idVencedor]){map[terc.idVencedor].nivel=80;map[terc.idVencedor].fase='3º lugar';}if(terc.idPerdedor&&map[terc.idPerdedor]){map[terc.idPerdedor].nivel=70;map[terc.idPerdedor].fase='4º lugar';}}
-  mm.forEach(x=>{const n=ordemFase_(x.fase)*10;if(x.idPerdedor&&map[x.idPerdedor]&&map[x.idPerdedor].nivel===0){map[x.idPerdedor].nivel=n;map[x.idPerdedor].fase='Eliminado em '+nomeFaseRelatorio_(x.fase);}});
-  const arr=Object.values(map).sort((a,b)=>b.nivel-a.nivel||a.posGrupo-b.posGrupo||b.vitorias-a.vitorias||b.saldoSets-a.saldoSets||b.saldoPontos-a.saldoPontos||b.setsPro-a.setsPro||b.pontosPro-a.pontosPro||String(a.nome).localeCompare(String(b.nome),'pt-BR'));
-  return arr.map((x,i)=>Object.assign(x,{posicao:i+1}));
-}
-function nomeFaseRelatorio_(f){return String(f||'').replace(/_/g,' ').toLowerCase().replace(/\b\w/g,c=>c.toUpperCase());}
-function slugArquivo_(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'');}
+function slugArquivoLocal_(v){return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Za-z0-9]+/g,'_').replace(/^_+|_+$/g,'');}
 
 // ============================================================
 // FIM: ENCERRAMENTO_TORNEIO.gs
@@ -984,25 +927,3 @@ function limparExtrasNovaEdicao_(){
 // ============================================================
 // FIM: ENCERRAMENTO_EXTENSOES.gs
 // ============================================================
-
-
-// ============================================================
-// AUTORIZAÇÃO INICIAL DO BACKEND
-// Execute manualmente uma única vez no editor do Apps Script,
-// autorize os acessos solicitados e somente depois publique a Web App.
-// ============================================================
-function autorizarBackend_(){
-  const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
-  ss.getName();
-  DriveApp.getFileById(SPREADSHEET_ID).getName();
-  const doc=DocumentApp.create('TEMP_AUTORIZACAO_TORNEIO');
-  doc.getBody().appendParagraph('Autorização temporária do backend do torneio.');
-  doc.saveAndClose();
-  DriveApp.getFileById(doc.getId()).setTrashed(true);
-  UrlFetchApp.fetch('https://www.google.com/generate_204',{muteHttpExceptions:true});
-  MailApp.getRemainingDailyQuota();
-  const token=ScriptApp.getOAuthToken();
-  if(!token)throw new Error('Não foi possível obter o token OAuth.');
-  Logger.log('AUTORIZACAO_BACKEND_OK');
-  return 'AUTORIZACAO_BACKEND_OK';
-}
