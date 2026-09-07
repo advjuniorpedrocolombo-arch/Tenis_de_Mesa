@@ -80,12 +80,12 @@ function adminResetarTorneio_(p,usuario){
   setConfig_('ULTIMO_ARQUIVAMENTO_PASTA_URL','','Link da última pasta de arquivamento criada automaticamente');
   setConfig_('ULTIMO_ARQUIVAMENTO_FINGERPRINT','','Assinatura dos dados operacionais no momento do arquivamento');
   registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'TORNEIO_RESETADO',entidade:'TORNEIO',idRegistro:gerarId_('RESET'),valorAnterior:pastaUrl,valorNovo:'NOVO_CICLO',observacoes:'Reset mestre executado após arquivamento validado. Usuários, operadores, configurações e ranking preservados.'});
-  CacheService.getScriptCache().removeAll([]);
   return {ok:true,mensagem:'Reset concluído. O sistema está pronto para uma nova edição.',arquivoAnteriorUrl:pastaUrl};
 }
 
 function temDadosOperacionais_(){
-  return ['PARTICIPANTES','GRUPOS','JOGOS','CLASSIFICACAO','MATA_MATA'].some(nome=>{const sh=SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(nome);return sh&&sh.getLastRow()>1;});
+  const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
+  return ['PARTICIPANTES','GRUPOS','JOGOS','CLASSIFICACAO','MATA_MATA'].some(nome=>{const sh=ss.getSheetByName(nome);return sh&&sh.getLastRow()>1;});
 }
 
 function gerarFingerprintTorneio_(){
