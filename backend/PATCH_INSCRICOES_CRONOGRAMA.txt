@@ -1,0 +1,27 @@
+PATCH – INSCRIÇÕES E CRONOGRAMA PÚBLICO
+
+1) No Apps Script, crie INSCRICOES_CRONOGRAMA.gs e copie integralmente backend/INSCRICOES_CRONOGRAMA.gs.
+
+2) Em doGet(e), troque a resposta da action status por:
+if(a==='status')return jsonResponse_(obterEstadoInscricoesCronograma_());
+
+Acrescente também:
+if(a==='adminPlanejamento'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(obterEstadoInscricoesCronograma_());}
+
+3) Em doPost(e), antes de ACAO_INVALIDA, acrescente:
+if(a==='adminSalvarPlanejamento'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarPlanejamentoInscricoes_(p,s.usuario));}
+if(a==='adminEncerrarInscricoes'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(encerrarInscricoesAgora_(p,s.usuario));}
+if(a==='adminReabrirInscricoes'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(reabrirInscricoes_(p,s.usuario));}
+
+4) No início de registrarInscricao_(d), substitua a checagem direta de STATUS_INSCRICOES por:
+const liberacao=validarInscricoesAbertas_();if(!liberacao.ok)return liberacao;
+
+5) Regras:
+- prazo de encerramento no formato AAAA-MM-DDTHH:MM;
+- ao atingir o prazo, novas inscrições são rejeitadas automaticamente pelo backend;
+- encerramento manual pelo administrador é permitido;
+- reabertura exige motivo e novo prazo futuro;
+- status público retorna prazo, sorteio, início, final prevista e ordem das finais;
+- cronograma público pode exibir contagem regressiva.
+
+6) Salve e publique NOVA VERSÃO do Web App.
