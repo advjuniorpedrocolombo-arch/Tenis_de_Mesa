@@ -1,87 +1,41 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel Administrativo – Tênis de Mesa</title>
-  <style>
-    *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#eef2f7;color:#1f2937}.topo{background:#111827;color:#fff;padding:24px 18px}.topo .linha{max-width:1180px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.topo h1{margin:0;font-size:26px}.topo p{margin:5px 0 0;color:#d1d5db}.wrap{max-width:1180px;margin:24px auto;padding:0 16px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 5px 18px rgba(0,0,0,.07)}.numero{font-size:30px;font-weight:800}.rotulo{color:#6b7280;font-size:13px}.barra{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.barra input,.barra select{padding:10px;border:1px solid #d1d5db;border-radius:9px;background:#fff}.barra input{min-width:260px;flex:1}.barra button{padding:10px 14px;border:0;border-radius:9px;background:#111827;color:#fff;font-weight:700;cursor:pointer}.tabela{overflow:auto;background:#fff;border-radius:14px;box-shadow:0 5px 18px rgba(0,0,0,.07)}table{border-collapse:collapse;width:100%;min-width:980px}th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px}th{background:#f9fafb;position:sticky;top:0}select.cat{padding:7px;border:1px solid #d1d5db;border-radius:7px}.acao{display:flex;gap:7px;flex-wrap:wrap}.acao button{border:0;border-radius:7px;padding:8px 10px;font-weight:700;cursor:pointer}.aprovar{background:#dcfce7;color:#166534}.pendente{background:#fef3c7;color:#92400e}.cancelar{background:#fee2e2;color:#991b1b}.pill{padding:5px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#e5e7eb}.msg{margin:12px 0;font-weight:700}.link{color:#fff;text-decoration:none;border:1px solid #4b5563;padding:9px 12px;border-radius:8px}.versao{font-size:12px;color:#6b7280;margin-top:8px}@media(max-width:850px){.cards{grid-template-columns:1fr 1fr}}@media(max-width:520px){.cards{grid-template-columns:1fr}}
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Painel Administrativo – Tênis de Mesa</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#eef2f7;color:#1f2937}.topo{background:#111827;color:#fff;padding:22px 18px}.linha{max-width:1180px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}.topo h1{margin:0;font-size:26px}.topo p{margin:5px 0 0;color:#d1d5db}.top-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.link,.btn-sair{color:#fff;text-decoration:none;border:1px solid #4b5563;padding:9px 12px;border-radius:8px;background:transparent;cursor:pointer}.wrap{max-width:1180px;margin:24px auto;padding:0 16px}.card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 5px 18px rgba(0,0,0,.07)}.login-box{max-width:430px;margin:55px auto}.login-box h2{margin-top:0}.login-box input,.login-box button,.operador-form input,.operador-form select{width:100%;padding:11px 12px;margin-top:8px;border:1px solid #d1d5db;border-radius:9px;font-size:15px}.login-box button,.operador-form button{background:#111827;color:#fff;border:0;font-weight:700;cursor:pointer}.hint{font-size:13px;color:#6b7280}.msg{margin:12px 0;font-weight:700}.erro{color:#b91c1c}.sucesso{color:#166534}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.numero{font-size:30px;font-weight:800}.rotulo{color:#6b7280;font-size:13px}.barra{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.barra input,.barra select{padding:10px;border:1px solid #d1d5db;border-radius:9px;background:#fff}.barra input{min-width:260px;flex:1}.barra button{padding:10px 14px;border:0;border-radius:9px;background:#111827;color:#fff;font-weight:700;cursor:pointer}.tabela{overflow:auto;background:#fff;border-radius:14px;box-shadow:0 5px 18px rgba(0,0,0,.07)}table{border-collapse:collapse;width:100%;min-width:980px}th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px}th{background:#f9fafb}select.cat{padding:7px;border:1px solid #d1d5db;border-radius:7px}.acao{display:flex;gap:7px;flex-wrap:wrap}.acao button{border:0;border-radius:7px;padding:8px 10px;font-weight:700;cursor:pointer}.aprovar{background:#dcfce7;color:#166534}.pendente{background:#fef3c7;color:#92400e}.cancelar{background:#fee2e2;color:#991b1b}.pill{padding:5px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#e5e7eb}.usuario{font-size:13px;color:#d1d5db}.secao{margin-top:24px}.secao h2{margin:0 0 12px}.operador-grid{display:grid;grid-template-columns:360px 1fr;gap:16px}.operador-form label{display:block;margin-top:9px;font-weight:700;font-size:14px}.versao{font-size:12px;color:#6b7280;margin:8px 0}.oculto{display:none!important}@media(max-width:850px){.cards{grid-template-columns:1fr 1fr}.operador-grid{grid-template-columns:1fr}}@media(max-width:520px){.cards{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-  <header class="topo"><div class="linha"><div><h1>Painel Administrativo</h1><p>Sistema de Torneio de Tênis de Mesa – Etec</p></div><a class="link" href="../index.html">Abrir página pública</a></div></header>
-  <main class="wrap">
-    <section class="cards">
-      <div class="card"><div class="numero" id="total">0</div><div class="rotulo">Participantes ativos</div></div>
-      <div class="card"><div class="numero" id="pendentes">0</div><div class="rotulo">Pendentes de revisão</div></div>
-      <div class="card"><div class="numero" id="mesatenistas">0</div><div class="rotulo">Mesatenistas</div></div>
-      <div class="card"><div class="numero" id="recreativos">0</div><div class="rotulo">Recreativo</div></div>
-    </section>
-    <section class="barra">
-      <input id="busca" placeholder="Buscar por nome ou turma...">
-      <select id="filtroCategoria"><option value="">Todas as categorias</option><option>Mesatenistas</option><option>Recreativo</option></select>
-      <select id="filtroStatus"><option value="">Todos os status</option><option value="PENDENTE_REVISAO">Pendente</option><option value="APROVADO">Aprovado</option><option value="CANCELADO">Cancelado</option></select>
-      <button onclick="carregarParticipantes()">Atualizar</button>
-    </section>
-    <div id="mensagem" class="msg"></div>
-    <div class="versao">Versão do painel: 1.1</div>
-    <section class="tabela"><table><thead><tr><th>Nome</th><th>Turma</th><th>Escolhida</th><th>Validada</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tbody"><tr><td colspan="6">Carregando participantes...</td></tr></tbody></table></section>
-  </main>
-  <script>
-    const API_URL='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';
-    let participantes=[];
-    async function carregarParticipantes(){
-      const msg=document.getElementById('mensagem');
-      const tb=document.getElementById('tbody');
-      msg.textContent='Carregando participantes...';
-      try{
-        const url=API_URL+'?action=participantesAdmin&_='+Date.now();
-        const r=await fetch(url,{cache:'no-store'});
-        const texto=await r.text();
-        let d;
-        try{d=JSON.parse(texto)}catch(_){throw new Error('Resposta inválida do servidor: '+texto.slice(0,120));}
-        if(!d.ok) throw new Error(d.mensagem||d.erro||'Erro ao carregar participantes.');
-        participantes=Array.isArray(d.participantes)?d.participantes:[];
-        atualizarIndicadores();
-        renderizar();
-        msg.textContent=participantes.length?'Lista atualizada com sucesso.':'Nenhum participante encontrado no banco.';
-      }catch(e){
-        tb.innerHTML='<tr><td colspan="6">Falha ao carregar participantes.</td></tr>';
-        msg.textContent='Não foi possível carregar os participantes: '+e.message;
-      }
-    }
-    function atualizarIndicadores(){
-      document.getElementById('total').textContent=participantes.length;
-      document.getElementById('pendentes').textContent=participantes.filter(p=>p.statusInscricao==='PENDENTE_REVISAO'||p.statusRevisao==='PENDENTE').length;
-      document.getElementById('mesatenistas').textContent=participantes.filter(p=>(p.categoriaValidada||p.categoriaEscolhida)==='Mesatenistas').length;
-      document.getElementById('recreativos').textContent=participantes.filter(p=>(p.categoriaValidada||p.categoriaEscolhida)==='Recreativo').length;
-    }
-    function renderizar(){
-      const termo=document.getElementById('busca').value.toLowerCase().trim();
-      const cat=document.getElementById('filtroCategoria').value;
-      const st=document.getElementById('filtroStatus').value;
-      const lista=participantes.filter(p=>{const okBusca=!termo||String(p.nome||'').toLowerCase().includes(termo)||String(p.turma||'').toLowerCase().includes(termo);const categoria=p.categoriaValidada||p.categoriaEscolhida||'';return okBusca&&(!cat||categoria===cat)&&(!st||p.statusInscricao===st);});
-      const tb=document.getElementById('tbody');
-      if(!lista.length){tb.innerHTML='<tr><td colspan="6">Nenhum participante encontrado.</td></tr>';return;}
-      tb.innerHTML=lista.map(p=>`<tr><td><strong>${esc(p.nome)}</strong><br><small>${esc(p.id)}</small></td><td>${esc(p.turma)}</td><td>${esc(p.categoriaEscolhida)}</td><td><select class="cat" id="cat-${p.id}"><option value="Mesatenistas" ${(p.categoriaValidada||p.categoriaEscolhida)==='Mesatenistas'?'selected':''}>Mesatenistas</option><option value="Recreativo" ${(p.categoriaValidada||p.categoriaEscolhida)==='Recreativo'?'selected':''}>Recreativo</option></select></td><td><span class="pill">${esc(p.statusInscricao||p.statusRevisao||'')}</span></td><td><div class="acao"><button class="aprovar" onclick="salvar('${p.id}','APROVADO')">Aprovar</button><button class="pendente" onclick="salvar('${p.id}','PENDENTE_REVISAO')">Pendente</button><button class="cancelar" onclick="salvar('${p.id}','CANCELADO')">Cancelar</button></div></td></tr>`).join('');
-    }
-    async function salvar(id,status){
-      const categoria=document.getElementById('cat-'+id).value;
-      const msg=document.getElementById('mensagem');msg.textContent='Salvando alteração...';
-      try{
-        const body=new URLSearchParams({action:'adminAtualizarParticipante',idParticipante:id,categoriaValidada:categoria,statusInscricao:status});
-        const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString()});
-        const d=await r.json();
-        if(!d.ok) throw new Error(d.mensagem||d.erro||'Não foi possível salvar.');
-        msg.textContent=d.mensagem||'Participante atualizado com sucesso.';
-        await carregarParticipantes();
-      }catch(e){msg.textContent='A alteração não foi gravada: '+e.message;}
-    }
-    function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-    document.getElementById('busca').addEventListener('input',renderizar);
-    document.getElementById('filtroCategoria').addEventListener('change',renderizar);
-    document.getElementById('filtroStatus').addEventListener('change',renderizar);
-    carregarParticipantes();
-  </script>
-</body>
-</html>
+<header class="topo"><div class="linha"><div><h1>Painel Administrativo</h1><p>Sistema de Torneio de Tênis de Mesa – Etec</p></div><div class="top-actions"><span id="usuarioTopo" class="usuario"></span><button id="btnSair" class="btn-sair oculto" onclick="logout()">Sair</button><a class="link" href="../index.html">Página pública</a></div></div></header>
+<main class="wrap">
+<section id="loginView" class="card login-box"><h2>Acesso administrativo</h2><p class="hint">Cada administrador ou aluno operador utiliza seu próprio e-mail e PIN.</p><form id="formLogin"><label>E-mail</label><input id="loginEmail" type="email" required autocomplete="username"><label>PIN</label><input id="loginPin" type="password" required inputmode="numeric" autocomplete="current-password"><button type="submit">Entrar</button></form><div id="loginMsg" class="msg"></div></section>
+<section id="appView" class="oculto">
+<div class="cards"><div class="card"><div class="numero" id="total">0</div><div class="rotulo">Participantes ativos</div></div><div class="card"><div class="numero" id="pendentes">0</div><div class="rotulo">Pendentes de revisão</div></div><div class="card"><div class="numero" id="mesatenistas">0</div><div class="rotulo">Mesatenistas</div></div><div class="card"><div class="numero" id="recreativos">0</div><div class="rotulo">Recreativo</div></div></div>
+<section class="barra"><input id="busca" placeholder="Buscar por nome ou turma..."><select id="filtroCategoria"><option value="">Todas as categorias</option><option>Mesatenistas</option><option>Recreativo</option></select><select id="filtroStatus"><option value="">Todos os status</option><option value="PENDENTE_REVISAO">Pendente</option><option value="APROVADO">Aprovado</option><option value="CANCELADO">Cancelado</option></select><button onclick="carregarParticipantes()">Atualizar</button></section>
+<div id="mensagem" class="msg"></div><div class="versao">Versão do painel: 2.0 – acesso protegido</div>
+<section class="tabela"><table><thead><tr><th>Nome</th><th>Turma</th><th>Escolhida</th><th>Validada</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tbody"></tbody></table></section>
+<section id="secaoOperadores" class="secao oculto"><h2>Operadores do torneio</h2><div class="operador-grid"><div class="card operador-form"><h3>Novo operador</h3><label>Nome</label><input id="opNome"><label>E-mail</label><input id="opEmail" type="email"><label>PIN inicial</label><input id="opPin" type="password" inputmode="numeric" placeholder="mínimo 6 caracteres"><label>Nível de acesso</label><select id="opNivel"><option value="OPERADOR">OPERADOR</option><option value="ADMINISTRADOR">ADMINISTRADOR</option></select><button onclick="salvarOperador()">Cadastrar operador</button><div id="opMsg" class="msg"></div></div><div class="tabela"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Nível</th><th>Status</th><th>Ação</th></tr></thead><tbody id="tbodyOps"></tbody></table></div></div></section>
+</section>
+</main>
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';
+let token=sessionStorage.getItem('tm_admin_token')||'';let usuario=null;let participantes=[];
+const post=async obj=>{const body=new URLSearchParams(obj);const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString()});return r.json()};
+async function iniciar(){if(!token)return mostrarLogin();try{const r=await fetch(API_URL+'?action=adminSessao&token='+encodeURIComponent(token)+'&_='+Date.now(),{cache:'no-store'});const d=await r.json();if(!d.ok)throw 0;usuario=d.usuario;abrirPainel()}catch(_){logout(false)}}
+function mostrarLogin(){document.getElementById('loginView').classList.remove('oculto');document.getElementById('appView').classList.add('oculto');document.getElementById('btnSair').classList.add('oculto');document.getElementById('usuarioTopo').textContent=''}
+async function login(e){e.preventDefault();const msg=document.getElementById('loginMsg');msg.className='msg';msg.textContent='Autenticando...';try{const d=await post({action:'adminLogin',email:document.getElementById('loginEmail').value,pin:document.getElementById('loginPin').value});if(!d.ok)throw new Error(d.mensagem||'Acesso negado.');token=d.token;usuario=d.usuario;sessionStorage.setItem('tm_admin_token',token);msg.textContent='';abrirPainel()}catch(err){msg.className='msg erro';msg.textContent=err.message}}
+function abrirPainel(){document.getElementById('loginView').classList.add('oculto');document.getElementById('appView').classList.remove('oculto');document.getElementById('btnSair').classList.remove('oculto');document.getElementById('usuarioTopo').textContent=(usuario?.nome||'')+' • '+(usuario?.nivel||'');const admin=usuario?.nivel==='ADMINISTRADOR';document.getElementById('secaoOperadores').classList.toggle('oculto',!admin);carregarParticipantes();if(admin)carregarOperadores()}
+function logout(chamarServidor=true){if(chamarServidor&&token)post({action:'adminLogout',token}).catch(()=>{});sessionStorage.removeItem('tm_admin_token');token='';usuario=null;mostrarLogin()}
+async function carregarParticipantes(){const msg=document.getElementById('mensagem');msg.textContent='Carregando...';try{const r=await fetch(API_URL+'?action=participantesAdmin&token='+encodeURIComponent(token)+'&_='+Date.now(),{cache:'no-store'});const d=await r.json();if(d.erro==='NAO_AUTORIZADO'){logout(false);return}if(!d.ok)throw new Error(d.mensagem||d.erro);participantes=d.participantes||[];atualizarIndicadores();renderizar();msg.textContent='Lista atualizada.'}catch(e){msg.className='msg erro';msg.textContent='Não foi possível carregar: '+e.message}}
+function atualizarIndicadores(){total.textContent=participantes.length;pendentes.textContent=participantes.filter(p=>p.statusInscricao==='PENDENTE_REVISAO'||p.statusRevisao==='PENDENTE').length;mesatenistas.textContent=participantes.filter(p=>(p.categoriaValidada||p.categoriaEscolhida)==='Mesatenistas').length;recreativos.textContent=participantes.filter(p=>(p.categoriaValidada||p.categoriaEscolhida)==='Recreativo').length}
+function renderizar(){const termo=busca.value.toLowerCase().trim(),cat=filtroCategoria.value,st=filtroStatus.value;const lista=participantes.filter(p=>{const ok=!termo||String(p.nome||'').toLowerCase().includes(termo)||String(p.turma||'').toLowerCase().includes(termo);const c=p.categoriaValidada||p.categoriaEscolhida||'';return ok&&(!cat||c===cat)&&(!st||p.statusInscricao===st)});tbody.innerHTML=lista.length?lista.map(p=>`<tr><td><strong>${esc(p.nome)}</strong><br><small>${esc(p.id)}</small></td><td>${esc(p.turma)}</td><td>${esc(p.categoriaEscolhida)}</td><td><select class="cat" id="cat-${p.id}"><option value="Mesatenistas" ${(p.categoriaValidada||p.categoriaEscolhida)==='Mesatenistas'?'selected':''}>Mesatenistas</option><option value="Recreativo" ${(p.categoriaValidada||p.categoriaEscolhida)==='Recreativo'?'selected':''}>Recreativo</option></select></td><td><span class="pill">${esc(p.statusInscricao)}</span></td><td><div class="acao"><button class="aprovar" onclick="salvarParticipante('${p.id}','APROVADO')">Aprovar</button><button class="pendente" onclick="salvarParticipante('${p.id}','PENDENTE_REVISAO')">Pendente</button><button class="cancelar" onclick="salvarParticipante('${p.id}','CANCELADO')">Cancelar</button></div></td></tr>`).join(''):'<tr><td colspan="6">Nenhum participante encontrado.</td></tr>'}
+async function salvarParticipante(id,status){const msg=document.getElementById('mensagem');msg.textContent='Salvando...';try{const d=await post({action:'adminAtualizarParticipante',token,idParticipante:id,categoriaValidada:document.getElementById('cat-'+id).value,statusInscricao:status});if(d.erro==='NAO_AUTORIZADO'){logout(false);return}if(!d.ok)throw new Error(d.mensagem||d.erro);msg.className='msg sucesso';msg.textContent=d.mensagem||'Atualizado.';await carregarParticipantes()}catch(e){msg.className='msg erro';msg.textContent='A alteração não foi gravada: '+e.message}}
+async function carregarOperadores(){try{const r=await fetch(API_URL+'?action=adminOperadores&token='+encodeURIComponent(token)+'&_='+Date.now(),{cache:'no-store'});const d=await r.json();if(!d.ok)throw new Error(d.mensagem||d.erro);tbodyOps.innerHTML=(d.operadores||[]).map(o=>`<tr><td>${esc(o.nome)}</td><td>${esc(o.email)}</td><td>${esc(o.nivel)}</td><td>${esc(o.status)}</td><td><button onclick="alterarStatusOperador('${o.id}','${o.status==='ATIVO'?'INATIVO':'ATIVO'}')">${o.status==='ATIVO'?'Desativar':'Ativar'}</button></td></tr>`).join('')||'<tr><td colspan="5">Nenhum operador cadastrado.</td></tr>'}catch(e){opMsg.className='msg erro';opMsg.textContent=e.message}}
+async function salvarOperador(){opMsg.className='msg';opMsg.textContent='Cadastrando...';try{const d=await post({action:'adminSalvarOperador',token,nome:opNome.value,email:opEmail.value,pin:opPin.value,nivel:opNivel.value});if(!d.ok)throw new Error(d.mensagem||d.erro);opMsg.className='msg sucesso';opMsg.textContent=d.mensagem;opNome.value='';opEmail.value='';opPin.value='';await carregarOperadores()}catch(e){opMsg.className='msg erro';opMsg.textContent=e.message}}
+async function alterarStatusOperador(id,status){try{const d=await post({action:'adminStatusOperador',token,idOperador:id,status});if(!d.ok)throw new Error(d.mensagem||d.erro);await carregarOperadores()}catch(e){opMsg.className='msg erro';opMsg.textContent=e.message}}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+formLogin.addEventListener('submit',login);busca.addEventListener('input',renderizar);filtroCategoria.addEventListener('change',renderizar);filtroStatus.addEventListener('change',renderizar);iniciar();
+</script>
+</body></html>
