@@ -5,6 +5,7 @@
  *
  * IMPORTANTE: no Apps Script, este arquivo pode substituir integralmente o Code.gs atual.
  * Não copie os módulos separados se utilizar este pacote único, para evitar funções duplicadas.
+ * Após colar o código, execute autorizarBackend_() uma única vez no editor antes de implantar.
  */
 
 
@@ -886,8 +887,19 @@ function criarPdfAba_(ss,nomeAba,pasta,nomeArquivo){
   pasta.createFile(buscarPdf_(url).setName(nomeArquivo));
 }
 function buscarPdf_(url){
-  const r=UrlFetchApp.fetch(url,{headers:{Authorization:'Bearer '+ScriptApp.getOAuthToken()},muteHttpExceptions:true});
-  if(r.getResponseCode()!==200)throw new Error('ERRO_PDF|Não foi possível gerar um dos PDFs do encerramento. Código '+r.getResponseCode());
+  const tokenOAuth=ScriptApp.getOAuthToken();
+  if(!tokenOAuth)throw new Error('ERRO_OAUTH|Não foi possível obter o token OAuth do Apps Script. Execute autorizarBackend_() no editor e publique uma nova versão.');
+  const r=UrlFetchApp.fetch(url,{
+    method:'get',
+    headers:{Authorization:'Bearer '+tokenOAuth},
+    followRedirects:true,
+    muteHttpExceptions:true
+  });
+  const codigo=r.getResponseCode();
+  if(codigo!==200){
+    const detalhe=String(r.getContentText()||'').replace(/\s+/g,' ').slice(0,350);
+    throw new Error('ERRO_PDF|Não foi possível gerar um dos PDFs do encerramento. Código '+codigo+(detalhe?' | '+detalhe:''));
+  }
   return r.getBlob().setContentType('application/pdf');
 }
 
@@ -972,3 +984,25 @@ function limparExtrasNovaEdicao_(){
 // ============================================================
 // FIM: ENCERRAMENTO_EXTENSOES.gs
 // ============================================================
+
+
+// ============================================================
+// AUTORIZAÇÃO INICIAL DO BACKEND
+// Execute manualmente uma única vez no editor do Apps Script,
+// autorize os acessos solicitados e somente depois publique a Web App.
+// ============================================================
+function autorizarBackend_(){
+  const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
+  ss.getName();
+  DriveApp.getFileById(SPREADSHEET_ID).getName();
+  const doc=DocumentApp.create('TEMP_AUTORIZACAO_TORNEIO');
+  doc.getBody().appendParagraph('Autorização temporária do backend do torneio.');
+  doc.saveAndClose();
+  DriveApp.getFileById(doc.getId()).setTrashed(true);
+  UrlFetchApp.fetch('https://www.google.com/generate_204',{muteHttpExceptions:true});
+  MailApp.getRemainingDailyQuota();
+  const token=ScriptApp.getOAuthToken();
+  if(!token)throw new Error('Não foi possível obter o token OAuth.');
+  Logger.log('AUTORIZACAO_BACKEND_OK');
+  return 'AUTORIZACAO_BACKEND_OK';
+}
