@@ -48,7 +48,7 @@
     async function carregarParticipantes(){
       const msg=document.getElementById('mensagem');msg.textContent='Carregando...';
       try{
-        const r=await fetch(API_URL+'?action=participantesPublicos');
+        const r=await fetch(API_URL+'?action=participantesAdmin');
         const d=await r.json();
         if(!d.ok) throw new Error(d.mensagem||'Erro ao carregar participantes.');
         participantes=d.participantes||[]; atualizarIndicadores(); renderizar(); msg.textContent='';
@@ -92,10 +92,10 @@
         if(!d.ok) throw new Error(d.mensagem||d.erro||'Não foi possível salvar.');
         msg.textContent=d.mensagem||'Participante atualizado com sucesso.';
         await carregarParticipantes();
-      }catch(e){msg.textContent='A alteração não foi gravada: '+e.message+' O backend administrativo pode ainda não estar instalado no Apps Script.';}
+      }catch(e){msg.textContent='A alteração não foi gravada: '+e.message;}
     }
 
-    function esc(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+    function esc(v){return String(v??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
     document.getElementById('busca').addEventListener('input',renderizar);
     document.getElementById('filtroCategoria').addEventListener('change',renderizar);
     document.getElementById('filtroStatus').addEventListener('change',renderizar);
