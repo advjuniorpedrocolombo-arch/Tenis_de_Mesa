@@ -5,17 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel Administrativo – Tênis de Mesa</title>
   <style>
-    *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#eef2f7;color:#1f2937}.topo{background:#111827;color:#fff;padding:24px 18px}.topo .linha{max-width:1180px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.topo h1{margin:0;font-size:26px}.topo p{margin:5px 0 0;color:#d1d5db}.wrap{max-width:1180px;margin:24px auto;padding:0 16px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 5px 18px rgba(0,0,0,.07)}.numero{font-size:30px;font-weight:800}.rotulo{color:#6b7280;font-size:13px}.barra{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.barra input,.barra select{padding:10px;border:1px solid #d1d5db;border-radius:9px;background:#fff}.barra input{min-width:260px;flex:1}.barra button{padding:10px 14px;border:0;border-radius:9px;background:#111827;color:#fff;font-weight:700;cursor:pointer}.tabela{overflow:auto;background:#fff;border-radius:14px;box-shadow:0 5px 18px rgba(0,0,0,.07)}table{border-collapse:collapse;width:100%;min-width:980px}th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px}th{background:#f9fafb;position:sticky;top:0}select.cat{padding:7px;border:1px solid #d1d5db;border-radius:7px}.acao{display:flex;gap:7px;flex-wrap:wrap}.acao button{border:0;border-radius:7px;padding:8px 10px;font-weight:700;cursor:pointer}.aprovar{background:#dcfce7;color:#166534}.pendente{background:#fef3c7;color:#92400e}.cancelar{background:#fee2e2;color:#991b1b}.pill{padding:5px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#e5e7eb}.msg{margin:12px 0;font-weight:700}.link{color:#fff;text-decoration:none;border:1px solid #4b5563;padding:9px 12px;border-radius:8px}@media(max-width:850px){.cards{grid-template-columns:1fr 1fr}}@media(max-width:520px){.cards{grid-template-columns:1fr}}
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#eef2f7;color:#1f2937}.topo{background:#111827;color:#fff;padding:24px 18px}.topo .linha{max-width:1180px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}.topo h1{margin:0;font-size:26px}.topo p{margin:5px 0 0;color:#d1d5db}.wrap{max-width:1180px;margin:24px auto;padding:0 16px}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 5px 18px rgba(0,0,0,.07)}.numero{font-size:30px;font-weight:800}.rotulo{color:#6b7280;font-size:13px}.barra{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.barra input,.barra select{padding:10px;border:1px solid #d1d5db;border-radius:9px;background:#fff}.barra input{min-width:260px;flex:1}.barra button{padding:10px 14px;border:0;border-radius:9px;background:#111827;color:#fff;font-weight:700;cursor:pointer}.tabela{overflow:auto;background:#fff;border-radius:14px;box-shadow:0 5px 18px rgba(0,0,0,.07)}table{border-collapse:collapse;width:100%;min-width:980px}th,td{padding:12px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px}th{background:#f9fafb;position:sticky;top:0}select.cat{padding:7px;border:1px solid #d1d5db;border-radius:7px}.acao{display:flex;gap:7px;flex-wrap:wrap}.acao button{border:0;border-radius:7px;padding:8px 10px;font-weight:700;cursor:pointer}.aprovar{background:#dcfce7;color:#166534}.pendente{background:#fef3c7;color:#92400e}.cancelar{background:#fee2e2;color:#991b1b}.pill{padding:5px 8px;border-radius:999px;font-size:12px;font-weight:700;background:#e5e7eb}.msg{margin:12px 0;font-weight:700}.link{color:#fff;text-decoration:none;border:1px solid #4b5563;padding:9px 12px;border-radius:8px}.versao{font-size:12px;color:#6b7280;margin-top:8px}@media(max-width:850px){.cards{grid-template-columns:1fr 1fr}}@media(max-width:520px){.cards{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-  <header class="topo">
-    <div class="linha">
-      <div><h1>Painel Administrativo</h1><p>Sistema de Torneio de Tênis de Mesa – Etec</p></div>
-      <a class="link" href="../index.html">Abrir página pública</a>
-    </div>
-  </header>
-
+  <header class="topo"><div class="linha"><div><h1>Painel Administrativo</h1><p>Sistema de Torneio de Tênis de Mesa – Etec</p></div><a class="link" href="../index.html">Abrir página pública</a></div></header>
   <main class="wrap">
     <section class="cards">
       <div class="card"><div class="numero" id="total">0</div><div class="rotulo">Participantes ativos</div></div>
@@ -23,66 +17,54 @@
       <div class="card"><div class="numero" id="mesatenistas">0</div><div class="rotulo">Mesatenistas</div></div>
       <div class="card"><div class="numero" id="recreativos">0</div><div class="rotulo">Recreativo</div></div>
     </section>
-
     <section class="barra">
       <input id="busca" placeholder="Buscar por nome ou turma...">
       <select id="filtroCategoria"><option value="">Todas as categorias</option><option>Mesatenistas</option><option>Recreativo</option></select>
       <select id="filtroStatus"><option value="">Todos os status</option><option value="PENDENTE_REVISAO">Pendente</option><option value="APROVADO">Aprovado</option><option value="CANCELADO">Cancelado</option></select>
       <button onclick="carregarParticipantes()">Atualizar</button>
     </section>
-
     <div id="mensagem" class="msg"></div>
-
-    <section class="tabela">
-      <table>
-        <thead><tr><th>Nome</th><th>Turma</th><th>Escolhida</th><th>Validada</th><th>Status</th><th>Ações</th></tr></thead>
-        <tbody id="tbody"><tr><td colspan="6">Carregando participantes...</td></tr></tbody>
-      </table>
-    </section>
+    <div class="versao">Versão do painel: 1.1</div>
+    <section class="tabela"><table><thead><tr><th>Nome</th><th>Turma</th><th>Escolhida</th><th>Validada</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tbody"><tr><td colspan="6">Carregando participantes...</td></tr></tbody></table></section>
   </main>
-
   <script>
     const API_URL='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';
     let participantes=[];
-
     async function carregarParticipantes(){
-      const msg=document.getElementById('mensagem');msg.textContent='Carregando...';
+      const msg=document.getElementById('mensagem');
+      const tb=document.getElementById('tbody');
+      msg.textContent='Carregando participantes...';
       try{
-        const r=await fetch(API_URL+'?action=participantesAdmin');
-        const d=await r.json();
-        if(!d.ok) throw new Error(d.mensagem||'Erro ao carregar participantes.');
-        participantes=d.participantes||[]; atualizarIndicadores(); renderizar(); msg.textContent='';
-      }catch(e){msg.textContent='Não foi possível carregar os participantes: '+e.message;}
+        const url=API_URL+'?action=participantesAdmin&_='+Date.now();
+        const r=await fetch(url,{cache:'no-store'});
+        const texto=await r.text();
+        let d;
+        try{d=JSON.parse(texto)}catch(_){throw new Error('Resposta inválida do servidor: '+texto.slice(0,120));}
+        if(!d.ok) throw new Error(d.mensagem||d.erro||'Erro ao carregar participantes.');
+        participantes=Array.isArray(d.participantes)?d.participantes:[];
+        atualizarIndicadores();
+        renderizar();
+        msg.textContent=participantes.length?'Lista atualizada com sucesso.':'Nenhum participante encontrado no banco.';
+      }catch(e){
+        tb.innerHTML='<tr><td colspan="6">Falha ao carregar participantes.</td></tr>';
+        msg.textContent='Não foi possível carregar os participantes: '+e.message;
+      }
     }
-
     function atualizarIndicadores(){
       document.getElementById('total').textContent=participantes.length;
       document.getElementById('pendentes').textContent=participantes.filter(p=>p.statusInscricao==='PENDENTE_REVISAO'||p.statusRevisao==='PENDENTE').length;
       document.getElementById('mesatenistas').textContent=participantes.filter(p=>(p.categoriaValidada||p.categoriaEscolhida)==='Mesatenistas').length;
       document.getElementById('recreativos').textContent=participantes.filter(p=>(p.categoriaValidada||p.categoriaEscolhida)==='Recreativo').length;
     }
-
     function renderizar(){
       const termo=document.getElementById('busca').value.toLowerCase().trim();
       const cat=document.getElementById('filtroCategoria').value;
       const st=document.getElementById('filtroStatus').value;
-      const lista=participantes.filter(p=>{
-        const okBusca=!termo||String(p.nome||'').toLowerCase().includes(termo)||String(p.turma||'').toLowerCase().includes(termo);
-        const categoria=p.categoriaValidada||p.categoriaEscolhida||'';
-        return okBusca&&(!cat||categoria===cat)&&(!st||p.statusInscricao===st);
-      });
+      const lista=participantes.filter(p=>{const okBusca=!termo||String(p.nome||'').toLowerCase().includes(termo)||String(p.turma||'').toLowerCase().includes(termo);const categoria=p.categoriaValidada||p.categoriaEscolhida||'';return okBusca&&(!cat||categoria===cat)&&(!st||p.statusInscricao===st);});
       const tb=document.getElementById('tbody');
       if(!lista.length){tb.innerHTML='<tr><td colspan="6">Nenhum participante encontrado.</td></tr>';return;}
-      tb.innerHTML=lista.map(p=>`<tr>
-        <td><strong>${esc(p.nome)}</strong><br><small>${esc(p.id)}</small></td>
-        <td>${esc(p.turma)}</td>
-        <td>${esc(p.categoriaEscolhida)}</td>
-        <td><select class="cat" id="cat-${p.id}"><option value="Mesatenistas" ${(p.categoriaValidada||p.categoriaEscolhida)==='Mesatenistas'?'selected':''}>Mesatenistas</option><option value="Recreativo" ${(p.categoriaValidada||p.categoriaEscolhida)==='Recreativo'?'selected':''}>Recreativo</option></select></td>
-        <td><span class="pill">${esc(p.statusInscricao||p.statusRevisao||'')}</span></td>
-        <td><div class="acao"><button class="aprovar" onclick="salvar('${p.id}','APROVADO')">Aprovar</button><button class="pendente" onclick="salvar('${p.id}','PENDENTE_REVISAO')">Pendente</button><button class="cancelar" onclick="salvar('${p.id}','CANCELADO')">Cancelar</button></div></td>
-      </tr>`).join('');
+      tb.innerHTML=lista.map(p=>`<tr><td><strong>${esc(p.nome)}</strong><br><small>${esc(p.id)}</small></td><td>${esc(p.turma)}</td><td>${esc(p.categoriaEscolhida)}</td><td><select class="cat" id="cat-${p.id}"><option value="Mesatenistas" ${(p.categoriaValidada||p.categoriaEscolhida)==='Mesatenistas'?'selected':''}>Mesatenistas</option><option value="Recreativo" ${(p.categoriaValidada||p.categoriaEscolhida)==='Recreativo'?'selected':''}>Recreativo</option></select></td><td><span class="pill">${esc(p.statusInscricao||p.statusRevisao||'')}</span></td><td><div class="acao"><button class="aprovar" onclick="salvar('${p.id}','APROVADO')">Aprovar</button><button class="pendente" onclick="salvar('${p.id}','PENDENTE_REVISAO')">Pendente</button><button class="cancelar" onclick="salvar('${p.id}','CANCELADO')">Cancelar</button></div></td></tr>`).join('');
     }
-
     async function salvar(id,status){
       const categoria=document.getElementById('cat-'+id).value;
       const msg=document.getElementById('mensagem');msg.textContent='Salvando alteração...';
@@ -95,8 +77,7 @@
         await carregarParticipantes();
       }catch(e){msg.textContent='A alteração não foi gravada: '+e.message;}
     }
-
-    function esc(v){return String(v??'').replace(/[&<>'\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','\"':'&quot;'}[c]));}
+    function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
     document.getElementById('busca').addEventListener('input',renderizar);
     document.getElementById('filtroCategoria').addEventListener('change',renderizar);
     document.getElementById('filtroStatus').addEventListener('change',renderizar);
