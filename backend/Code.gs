@@ -55,6 +55,8 @@ function doPost(e){
     if(a==='adminSortearArbitros'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(sortearArbitros_(p,s.usuario));}
     if(a==='adminSubstituirArbitro'){const s=exigirSessao_(p.token);return jsonResponse_(substituirArbitro_(p,s.usuario));}
     if(a==='adminSalvarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarDataCalendario_(p,s.usuario));}
+    if(a==='adminBloquearDatasCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(bloquearDatasCalendario_(p,s.usuario));}
+    if(a==='adminExcluirDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(excluirDataCalendario_(p,s.usuario));}
     if(a==='adminDesativarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(desativarDataCalendario_(p,s.usuario));}
     if(a==='adminCancelarPartidaForcaMaior'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(cancelarPartidaForcaMaior_(p,s.usuario));}
     if(a==='adminRemarcarPartida'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(remarcarPartida_(p,s.usuario));}

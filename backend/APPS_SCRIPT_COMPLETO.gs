@@ -70,6 +70,8 @@ function doPost(e){
     if(a==='adminSortearArbitros'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(sortearArbitros_(p,s.usuario));}
     if(a==='adminSubstituirArbitro'){const s=exigirSessao_(p.token);return jsonResponse_(substituirArbitro_(p,s.usuario));}
     if(a==='adminSalvarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarDataCalendario_(p,s.usuario));}
+    if(a==='adminBloquearDatasCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(bloquearDatasCalendario_(p,s.usuario));}
+    if(a==='adminExcluirDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(excluirDataCalendario_(p,s.usuario));}
     if(a==='adminDesativarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(desativarDataCalendario_(p,s.usuario));}
     if(a==='adminCancelarPartidaForcaMaior'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(cancelarPartidaForcaMaior_(p,s.usuario));}
     if(a==='adminRemarcarPartida'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(remarcarPartida_(p,s.usuario));}
@@ -582,7 +584,7 @@ function listarCalendario_(){
 }
 
 function salvarDataCalendario_(p,usuario){
-  const data=normalizarDataChave_(p.data),status=String(p.status||'').toUpperCase(),tipo=String(p.tipoBloqueio||'').toUpperCase(),descricao=limparTexto_(p.descricao),hi=limparTexto_(p.horarioInicio),hf=limparTexto_(p.horarioFim),obs=limparTexto_(p.observacoes);
+  const data=normalizarDataChave_(p.data),status=String(p.status||'BLOQUEADO').toUpperCase(),tipo=String(p.tipoBloqueio||'').toUpperCase(),descricao=limparTexto_(p.descricao),hi=limparTexto_(p.horarioInicio),hf=limparTexto_(p.horarioFim),obs=limparTexto_(p.observacoes);
   if(!data)return {ok:false,erro:'DATA_OBRIGATORIA',mensagem:'Informe uma data válida.'};
   if(!['DISPONIVEL','BLOQUEADO'].includes(status))return {ok:false,erro:'STATUS_DATA_INVALIDO',mensagem:'Status da data inválido.'};
   const tipos=['FERIADO_NACIONAL','FERIADO_ESTADUAL','FERIADO_MUNICIPAL','EVENTO_ETEC','PATIO_INDISPONIVEL','OUTRO'];
@@ -594,6 +596,33 @@ function salvarDataCalendario_(p,usuario){
   h.forEach((cab,i)=>{if(Object.prototype.hasOwnProperty.call(dados,cab))sh.getRange(linha,i+1).setValue(dados[cab]);});
   registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:novo?'DATA_CALENDARIO_CADASTRADA':'DATA_CALENDARIO_ATUALIZADA',entidade:'CALENDARIO',idRegistro:id,valorAnterior:'',valorNovo:JSON.stringify({data,status,tipo,descricao,hi,hf}),observacoes:'Calendário oficial do torneio.'});
   return {ok:true,idData:id,mensagem:status==='DISPONIVEL'?'Data liberada para programação de partidas.':'Data bloqueada para jogos.'};
+}
+
+function bloquearDatasCalendario_(p,usuario){
+  let datas=[];
+  try{datas=Array.isArray(p.datas)?p.datas:JSON.parse(String(p.datas||'[]'));}catch(_){datas=String(p.datas||'').split(',');}
+  datas=[...new Set((datas||[]).map(normalizarDataChave_).filter(Boolean))];
+  if(!datas.length)return {ok:false,erro:'DATAS_OBRIGATORIAS',mensagem:'Selecione pelo menos uma data para bloquear.'};
+  const tipo=String(p.tipoBloqueio||'').toUpperCase(),descricao=limparTexto_(p.descricao),obs=limparTexto_(p.observacoes);
+  const tipos=['FERIADO_NACIONAL','FERIADO_ESTADUAL','FERIADO_MUNICIPAL','EVENTO_ETEC','PATIO_INDISPONIVEL','OUTRO'];
+  if(!tipos.includes(tipo))return {ok:false,erro:'TIPO_BLOQUEIO_OBRIGATORIO',mensagem:'Informe o motivo do bloqueio.'};
+  const atuais=listarCalendario_().filter(x=>x.ativo&&x.status==='BLOQUEADO');
+  let gravadas=0,atualizadas=0;
+  datas.forEach(data=>{
+    const existente=atuais.filter(x=>normalizarDataChave_(x.data)===data).slice(-1)[0];
+    const r=salvarDataCalendario_({idData:existente?existente.id:'',data,status:'BLOQUEADO',tipoBloqueio:tipo,descricao,observacoes:obs},usuario);
+    if(r.ok){existente?atualizadas++:gravadas++;}
+  });
+  return {ok:true,quantidade:datas.length,gravadas,atualizadas,mensagem:datas.length===1?'1 data foi marcada como indisponível.':datas.length+' datas foram marcadas como indisponíveis.'};
+}
+
+function excluirDataCalendario_(p,usuario){
+  const id=limparTexto_(p.idData),sh=SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_CALENDARIO_);if(!sh)return {ok:false,erro:'ABA_CALENDARIO_AUSENTE',mensagem:'A aba CALENDARIO não existe.'};
+  const h=getHeaders_(sh),idx=indexHeaders_(h),linha=localizarLinhaPorValor_(sh,idx.ID_DATA+1,id);if(linha===-1)return {ok:false,erro:'DATA_NAO_ENCONTRADA',mensagem:'Registro não encontrado.'};
+  const r=sh.getRange(linha,1,1,h.length).getDisplayValues()[0],anterior={id,data:r[idx.DATA]||'',status:r[idx.STATUS]||'',tipo:r[idx.TIPO_BLOQUEIO]||'',descricao:r[idx.DESCRICAO]||''};
+  sh.getRange(linha,1,1,h.length).clearContent();
+  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'DATA_CALENDARIO_EXCLUIDA',entidade:'CALENDARIO',idRegistro:id,valorAnterior:JSON.stringify(anterior),valorNovo:'EXCLUIDO',observacoes:'Bloqueio removido do calendário por correção administrativa.'});
+  return {ok:true,mensagem:'Dia bloqueado removido. A data voltou a ficar disponível para jogos.'};
 }
 
 function desativarDataCalendario_(p,usuario){
@@ -611,8 +640,7 @@ function obterRegraData_(data){
 
 function validarDataDisponivel_(data,horario){
   const chave=normalizarDataChave_(data);if(!chave)return {ok:false,erro:'DATA_INVALIDA',mensagem:'Informe uma data válida.'};
-  const regra=obterRegraData_(chave),exigir=String(getConfig_('EXIGIR_DATA_CADASTRADA')||'TRUE').toUpperCase()!=='FALSE';
-  if(!regra&&exigir)return {ok:false,erro:'DATA_NAO_CADASTRADA',mensagem:'Esta data ainda não foi liberada no calendário oficial do torneio.'};
+  const regra=obterRegraData_(chave);
   if(regra&&regra.status==='BLOQUEADO')return {ok:false,erro:'DATA_BLOQUEADA',mensagem:'Não é permitido agendar nesta data: '+(regra.descricao||regra.tipoBloqueio||'data bloqueada')+'.'};
   if(regra&&horario&&regra.horarioInicio&&String(horario)<String(regra.horarioInicio))return {ok:false,erro:'HORARIO_FORA_JANELA',mensagem:'O horário informado é anterior ao período liberado nesta data.'};
   if(regra&&horario&&regra.horarioFim&&String(horario)>String(regra.horarioFim))return {ok:false,erro:'HORARIO_FORA_JANELA',mensagem:'O horário informado é posterior ao período liberado nesta data.'};
