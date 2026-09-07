@@ -43,6 +43,7 @@ function adminArquivarTorneio_(p,usuario){
   criarPdfAba_(ss,'PARTICIPANTES',pasta,'06_Participantes.pdf');
   criarPdfAba_(ss,'JOGOS',pasta,'07_Partidas.pdf');
   criarPdfAba_(ss,'HISTORICO',pasta,'08_Historico.pdf');
+  if(typeof arquivarExtrasOperacionais_==='function')arquivarExtrasOperacionais_(ss,pasta);
   criarRelatorioGeralPdf_(pasta,nomeTorneio,agora);
   categoriasPermitidas_().forEach((cat,i)=>criarResultadoCategoriaPdf_(pasta,cat,(i===0?'02':'03')+'_Resultado_'+slugArquivo_(cat)+'.pdf'));
 
@@ -72,10 +73,13 @@ function adminResetarTorneio_(p,usuario){
   limparAbaMantendoCabecalho_('CLASSIFICACAO');
   limparAbaMantendoCabecalho_('MATA_MATA');
   limparAbaMantendoCabecalho_('HISTORICO');
+  if(typeof limparExtrasNovaEdicao_==='function')limparExtrasNovaEdicao_();
   setConfig_('STATUS_TORNEIO','CONFIGURACAO','CONFIGURACAO, INSCRICOES, GRUPOS, EM_ANDAMENTO ou ENCERRADO');
   setConfig_('STATUS_INSCRICOES','ABERTAS','ABERTAS ou ENCERRADAS');
   setConfig_('DATA_INICIO','A DEFINIR','Data de início do torneio');
   setConfig_('DATA_FINAL_PREVISTA','A DEFINIR','Data final prevista');
+  setConfig_('DATA_HORA_ENCERRAMENTO_INSCRICOES','','Data e hora limite das inscrições');
+  setConfig_('DATA_SORTEIO_GRUPOS','','Data pública prevista para o sorteio dos grupos');
   setConfig_('ULTIMO_ARQUIVAMENTO_ID','','Identificador do último arquivamento concluído pelo sistema');
   setConfig_('ULTIMO_ARQUIVAMENTO_PASTA_URL','','Link da última pasta de arquivamento criada automaticamente');
   setConfig_('ULTIMO_ARQUIVAMENTO_FINGERPRINT','','Assinatura dos dados operacionais no momento do arquivamento');
@@ -85,7 +89,7 @@ function adminResetarTorneio_(p,usuario){
 
 function temDadosOperacionais_(){
   const ss=SpreadsheetApp.openById(SPREADSHEET_ID);
-  return ['PARTICIPANTES','GRUPOS','JOGOS','CLASSIFICACAO','MATA_MATA'].some(nome=>{const sh=ss.getSheetByName(nome);return sh&&sh.getLastRow()>1;});
+  return ['PARTICIPANTES','GRUPOS','JOGOS','CLASSIFICACAO','MATA_MATA','ARBITROS','CALENDARIO'].some(nome=>{const sh=ss.getSheetByName(nome);return sh&&sh.getLastRow()>1;});
 }
 
 function gerarFingerprintTorneio_(){
@@ -95,7 +99,8 @@ function gerarFingerprintTorneio_(){
     const lr=sh.getLastRow(),lc=sh.getLastColumn();
     return nome+':'+(lr&&lc?JSON.stringify(sh.getRange(1,1,lr,lc).getDisplayValues()):'');
   });
-  return hashTexto_(partes.join('\n'));
+  const extras=typeof fingerprintExtrasOperacionais_==='function'?fingerprintExtrasOperacionais_():'';
+  return hashTexto_(partes.join('\n')+'\n'+extras);
 }
 
 function limparAbaMantendoCabecalho_(nome){

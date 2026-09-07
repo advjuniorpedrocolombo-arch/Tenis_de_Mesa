@@ -1,5 +1,5 @@
 const SPREADSHEET_ID='1Ur2A0wAGxjpfjShdWOuN_-qw7o1qB-AT3JaymrFANGY';
-const SHEETS={CONFIG:'CONFIGURACOES',PARTICIPANTES:'PARTICIPANTES',OPERADORES:'OPERADORES',GRUPOS:'GRUPOS',JOGOS:'JOGOS',CLASSIFICACAO:'CLASSIFICACAO',MATA_MATA:'MATA_MATA',HISTORICO:'HISTORICO'};
+const SHEETS={CONFIG:'CONFIGURACOES',PARTICIPANTES:'PARTICIPANTES',OPERADORES:'OPERADORES',GRUPOS:'GRUPOS',JOGOS:'JOGOS',CLASSIFICACAO:'CLASSIFICACAO',MATA_MATA:'MATA_MATA',HISTORICO:'HISTORICO',ARBITROS:'ARBITROS',CALENDARIO:'CALENDARIO'};
 const SESSION_TTL=21600;
 const MAX_LOGIN_FAILS=5;
 const LOGIN_BLOCK_SECONDS=900;
@@ -7,18 +7,23 @@ const LOGIN_BLOCK_SECONDS=900;
 function doGet(e){
   try{
     const a=String((e&&e.parameter&&e.parameter.action)||'status').trim();
-    if(a==='status')return jsonResponse_({ok:true,sistema:'Sistema de Torneio de Tênis de Mesa – Etec',torneio:getConfig_('NOME_TORNEIO'),statusInscricoes:getConfig_('STATUS_INSCRICOES'),tipoInscricao:getConfig_('TIPO_INSCRICAO'),valorInscricao:Number(getConfig_('VALOR_INSCRICAO')||0),categorias:categoriasPermitidas_()});
+    if(a==='status')return jsonResponse_(obterEstadoInscricoesCronograma_());
     if(a==='participantesPublicos')return jsonResponse_({ok:true,participantes:listarParticipantesPublicos_()});
     if(a==='torneioPublico')return jsonResponse_({ok:true,jogos:listarJogos_(),classificacao:listarClassificacao_(),grupos:listarGruposPublicos_(),fasesGrupos:listarEstadosFasesGrupos_(),mataMata:listarMataMata_()});
+    if(a==='agendaPublica')return jsonResponse_({ok:true,jogos:listarAgendaPublicaV2_()});
     if(a==='adminSessao')return jsonResponse_(adminSessao_(e.parameter.token));
     if(a==='participantesAdmin'){const s=exigirSessao_(e.parameter.token);return jsonResponse_({ok:true,usuario:s.usuario,participantes:listarParticipantesAdmin_()});}
     if(a==='adminOperadores'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,operadores:listarOperadores_()});}
     if(a==='sorteioEstado'){const s=exigirSessao_(e.parameter.token);return jsonResponse_({ok:true,usuario:s.usuario,estado:obterEstadoSorteio_(e.parameter.categoria)});}
     if(a==='jogosAdmin'){const s=exigirSessao_(e.parameter.token);return jsonResponse_({ok:true,usuario:s.usuario,jogos:listarJogos_(),classificacao:listarClassificacao_(),grupos:listarGruposPublicos_(),fasesGrupos:listarEstadosFasesGrupos_(),mataMata:listarMataMata_()});}
+    if(a==='adminEncerramentoEstado'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(obterEstadoEncerramento_());}
+    if(a==='adminArbitros'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,arbitros:listarArbitros_()});}
+    if(a==='adminCalendario'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,datas:listarCalendario_()});}
+    if(a==='adminConflitosAgenda'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(listarConflitosAgenda_());}
+    if(a==='adminPlanejamento'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(obterEstadoInscricoesCronograma_());}
     return jsonResponse_({ok:false,erro:'ACAO_INVALIDA'});
   }catch(err){return erroJson_(err);}
 }
-
 function doPost(e){
   const lock=LockService.getScriptLock();
   try{
@@ -27,6 +32,8 @@ function doPost(e){
     if(a==='inscricao')return jsonResponse_(registrarInscricao_(p));
     if(a==='adminLogin')return jsonResponse_(adminLogin_(p));
     if(a==='adminLogout')return jsonResponse_(adminLogout_(p.token));
+    if(a==='adminSolicitarRecuperacao')return jsonResponse_(solicitarRecuperacaoPin_(p));
+    if(a==='adminRedefinirPin')return jsonResponse_(redefinirPinRecuperacao_(p));
     if(a==='adminAtualizarParticipante'){const s=exigirSessao_(p.token);return jsonResponse_(adminAtualizarParticipante_(p,s.usuario));}
     if(a==='adminSalvarOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminSalvarOperador_(p,s.usuario));}
     if(a==='adminStatusOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminStatusOperador_(p,s.usuario));}
@@ -40,11 +47,25 @@ function doPost(e){
     if(a==='faseGruposEncerrar'){const s=exigirSessao_(p.token);return jsonResponse_(encerrarFaseGrupos_(p,s.usuario));}
     if(a==='faseGruposReabrir'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(reabrirFaseGrupos_(p,s.usuario));}
     if(a==='salvarConfigCategoria'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarConfigCategoria_(p,s.usuario));}
+    if(a==='adminArquivarTorneio'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminArquivarTorneio_(p,s.usuario));}
+    if(a==='adminResetarTorneio'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminResetarTorneio_(p,s.usuario));}
+    if(a==='adminSalvarArbitro'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarArbitro_(p,s.usuario));}
+    if(a==='adminStatusArbitro'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(alterarStatusArbitro_(p,s.usuario));}
+    if(a==='adminSalvarAgendaJogo'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarAgendaJogoComConflitos_(p,s.usuario));}
+    if(a==='adminSortearArbitros'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(sortearArbitros_(p,s.usuario));}
+    if(a==='adminSubstituirArbitro'){const s=exigirSessao_(p.token);return jsonResponse_(substituirArbitro_(p,s.usuario));}
+    if(a==='adminSalvarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarDataCalendario_(p,s.usuario));}
+    if(a==='adminDesativarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(desativarDataCalendario_(p,s.usuario));}
+    if(a==='adminCancelarPartidaForcaMaior'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(cancelarPartidaForcaMaior_(p,s.usuario));}
+    if(a==='adminRemarcarPartida'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(remarcarPartida_(p,s.usuario));}
+    if(a==='adminBloquearDataEmMassa'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(bloquearDataEmMassa_(p,s.usuario));}
+    if(a==='adminSalvarPlanejamento'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarPlanejamentoInscricoes_(p,s.usuario));}
+    if(a==='adminEncerrarInscricoes'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(encerrarInscricoesAgora_(p,s.usuario));}
+    if(a==='adminReabrirInscricoes'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(reabrirInscricoes_(p,s.usuario));}
     return jsonResponse_({ok:false,erro:'ACAO_INVALIDA'});
   }catch(err){return erroJson_(err);}
   finally{try{lock.releaseLock()}catch(_){}}
 }
-
 function adminLogin_(p){
   const email=normalizarEmail_(p.email),pin=String(p.pin||'').trim();
   if(!email||!pin)return {ok:false,erro:'CREDENCIAIS_OBRIGATORIAS',mensagem:'Informe e-mail e PIN.'};
@@ -66,7 +87,7 @@ function loginFailKey_(e){return 'tm_fail_'+hashTexto_(e).slice(0,32)}
 function gerarToken_(){return Utilities.getUuid().replace(/-/g,'')+Utilities.getUuid().replace(/-/g,'')}
 
 function registrarInscricao_(d){
-  if(String(getConfig_('STATUS_INSCRICOES')||'').toUpperCase()!=='ABERTAS')return {ok:false,erro:'INSCRICOES_ENCERRADAS',mensagem:'As inscrições não estão abertas neste momento.'};
+  const liberacao=validarInscricoesAbertas_();if(!liberacao.ok)return liberacao;
   const nome=limparTexto_(d.nomeCompleto||d.nome),turma=limparTexto_(d.turma),modulo=limparTexto_(d.modulo),email=normalizarEmail_(d.email),categoria=limparTexto_(d.categoria);
   if(!nome||!turma||!email||!categoria)return {ok:false,erro:'CAMPOS_OBRIGATORIOS',mensagem:'Preencha nome, turma, e-mail e categoria.'};
   if(!emailValido_(email))return {ok:false,erro:'EMAIL_INVALIDO',mensagem:'Informe um e-mail válido.'};
@@ -148,8 +169,10 @@ function listarJogos_(){
 
 function salvarResultadoJogo_(d,usuario){
   const id=limparTexto_(d.idJogo),tipo=String(d.tipoResultado||'NORMAL').toUpperCase();if(!id)return {ok:false,erro:'JOGO_OBRIGATORIO',mensagem:'Partida não informada.'};if(!['NORMAL','WO_A','WO_B','WO_DUPLO'].includes(tipo))return {ok:false,erro:'TIPO_RESULTADO_INVALIDO',mensagem:'Tipo de resultado inválido.'};
+  const liberacaoAgenda=validarJogoPodeReceberResultado_(id);if(!liberacaoAgenda.ok)return liberacaoAgenda;
   const sh=getSheet_(SHEETS.JOGOS),h=getHeaders_(sh),idx=indexHeaders_(h),linha=localizarLinhaPorValor_(sh,idx.ID_JOGO+1,id);if(linha===-1)return {ok:false,erro:'JOGO_NAO_ENCONTRADO',mensagem:'Partida não encontrada.'};
   const r=sh.getRange(linha,1,1,h.length).getValues()[0],fase=String(r[idx.FASE]||''),categoria=String(r[idx.CATEGORIA]||''),statusAnterior=String(r[idx.STATUS]||''),melhorDe=melhorDePorFase_(fase);
+  if(fase==='FINAL'){const terceiro=listarJogos_().find(j=>j.categoria===categoria&&String(j.fase).toUpperCase()==='TERCEIRO_LUGAR');if(terceiro&&terceiro.status!=='FINALIZADO')return {ok:false,erro:'TERCEIRO_LUGAR_PENDENTE',mensagem:'A disputa de 3º lugar deve ser realizada antes da final.'};}
   if(fase==='GRUPOS'&&obterEstadoFaseGrupos_(categoria).encerrada)return {ok:false,erro:'FASE_GRUPOS_ENCERRADA',mensagem:'A fase de grupos desta categoria já foi encerrada. O administrador precisa reabri-la antes de corrigir resultados.'};
   if(statusAnterior==='FINALIZADO'&&fase!=='GRUPOS'){
     if(usuario.nivel!=='ADMINISTRADOR')return {ok:false,erro:'CORRECAO_RESTRITA',mensagem:'No mata-mata, somente o administrador pode corrigir uma partida finalizada.'};

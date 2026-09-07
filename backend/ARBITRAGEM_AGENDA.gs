@@ -42,8 +42,8 @@ function salvarAgendaJogo_(p,usuario){
 }
 
 function sortearArbitros_(p,usuario){
-  const jogos=lerJogosArbitragem_().filter(j=>j.status!=='FINALIZADO'&&j.data),arbitros=listarArbitros_().filter(a=>a.status==='ATIVO');
-  if(!jogos.length)return {ok:false,erro:'SEM_JOGOS_AGENDADOS',mensagem:'Não existem partidas pendentes com data definida.'};
+  const jogos=lerJogosArbitragem_().filter(j=>j.status!=='FINALIZADO'&&j.status!=='CANCELADA_PARA_REMARCACAO'&&j.data&&j.horario&&j.mesa),arbitros=listarArbitros_().filter(a=>a.status==='ATIVO');
+  if(!jogos.length)return {ok:false,erro:'SEM_JOGOS_AGENDADOS',mensagem:'Não existem partidas pendentes com data, horário e mesa completamente definidos.'};
   if(!arbitros.length)return {ok:false,erro:'SEM_ARBITROS',mensagem:'Cadastre ao menos um árbitro ativo.'};
   const porData={};jogos.forEach(j=>(porData[j.data]||(porData[j.data]=[])).push(j));
   let escalados=0,semArbitro=[];
