@@ -1,0 +1,27 @@
+PATCH PARA O APPS SCRIPT
+
+1) Dentro de doPost(e), logo após:
+if(a==='adminLogout')return jsonResponse_(adminLogout_(p.token));
+
+adicione:
+if(a==='adminSolicitarRecuperacao')return jsonResponse_(solicitarRecuperacaoPin_(p));
+if(a==='adminRedefinirPin')return jsonResponse_(redefinirPinRecuperacao_(p));
+
+2) No projeto do Apps Script, crie um novo arquivo chamado RECUPERACAO_PIN.gs e copie integralmente o conteúdo de backend/RECUPERACAO_PIN.gs.
+
+3) Dentro de salvarResultadoJogo_(d,usuario), logo após a linha que define fase, categoria, statusAnterior e melhorDe, adicione:
+
+if(fase==='FINAL'){
+  const terceiro=listarJogos_().find(j=>j.categoria===categoria&&String(j.fase).toUpperCase()==='TERCEIRO_LUGAR');
+  if(terceiro&&terceiro.status!=='FINALIZADO')return {ok:false,erro:'TERCEIRO_LUGAR_PENDENTE',mensagem:'A disputa de 3º lugar deve ser realizada antes da final.'};
+}
+
+REGRAS JÁ EXISTENTES NO BACKEND ATUAL
+- Semifinal: melhor de 5 sets.
+- Disputa de 3º lugar: melhor de 5 sets.
+- Final: melhor de 5 sets.
+- W.O. simples disponível.
+- W.O. duplo disponível.
+- A disputa de 3º lugar é gerada automaticamente a partir dos perdedores das semifinais.
+
+Após aplicar, salve e publique uma NOVA VERSÃO da implantação do Web App.
