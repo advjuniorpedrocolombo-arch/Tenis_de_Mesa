@@ -1,31 +1,51 @@
-PATCH – MÓDULO DE ÁRBITROS E AGENDA
+PATCH – ÁRBITROS, CALENDÁRIO, AGENDA E REMARCAÇÃO
 
 1) No objeto SHEETS do Code.gs, acrescente:
-ARBITROS:'ARBITROS'
+ARBITROS:'ARBITROS',CALENDARIO:'CALENDARIO'
 
 2) Dentro de doGet(e), antes de ACAO_INVALIDA, acrescente:
-if(a==='agendaPublica')return jsonResponse_({ok:true,jogos:listarAgendaPublica_()});
+if(a==='agendaPublica')return jsonResponse_({ok:true,jogos:listarAgendaPublicaV2_()});
 if(a==='adminArbitros'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,arbitros:listarArbitros_()});}
+if(a==='adminCalendario'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,datas:listarCalendario_()});}
 
 3) Dentro de doPost(e), antes de ACAO_INVALIDA, acrescente:
 if(a==='adminSalvarArbitro'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarArbitro_(p,s.usuario));}
 if(a==='adminStatusArbitro'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(alterarStatusArbitro_(p,s.usuario));}
-if(a==='adminSalvarAgendaJogo'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarAgendaJogo_(p,s.usuario));}
+if(a==='adminSalvarAgendaJogo'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarAgendaJogoSeguro_(p,s.usuario));}
 if(a==='adminSortearArbitros'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(sortearArbitros_(p,s.usuario));}
 if(a==='adminSubstituirArbitro'){const s=exigirSessao_(p.token);return jsonResponse_(substituirArbitro_(p,s.usuario));}
+if(a==='adminSalvarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarDataCalendario_(p,s.usuario));}
+if(a==='adminDesativarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(desativarDataCalendario_(p,s.usuario));}
+if(a==='adminCancelarPartidaForcaMaior'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(cancelarPartidaForcaMaior_(p,s.usuario));}
+if(a==='adminRemarcarPartida'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(remarcarPartida_(p,s.usuario));}
 
-4) No Apps Script crie ARBITRAGEM_AGENDA.gs e copie integralmente backend/ARBITRAGEM_AGENDA.gs.
+4) No início de salvarResultadoJogo_(d,usuario), logo após validar idJogo, acrescente:
+const liberacaoAgenda=validarJogoPodeReceberResultado_(id);if(!liberacaoAgenda.ok)return liberacaoAgenda;
 
-5) A planilha já foi preparada com a aba ARBITROS e com os campos de arbitragem adicionados à aba JOGOS.
+Isso impede lançar resultado em partida CANCELADA_PARA_REMARCACAO.
+
+5) No projeto Apps Script crie e copie integralmente:
+- ARBITRAGEM_AGENDA.gs  <- backend/ARBITRAGEM_AGENDA.gs
+- CALENDARIO_REMARCACAO.gs <- backend/CALENDARIO_REMARCACAO.gs
+
+6) A planilha já está preparada com:
+- aba ARBITROS;
+- aba CALENDARIO;
+- campos de arbitragem em JOGOS;
+- campos STATUS_AGENDA, MOTIVO_CANCELAMENTO, DATA_HORA_CANCELAMENTO, OPERADOR_CANCELAMENTO, DATA_ANTERIOR, HORARIO_ANTERIOR, MESA_ANTERIOR, QTDE_REMARCACOES, ID_REMARCACAO e OBSERVACAO_REMARCACAO.
 
 REGRAS IMPLEMENTADAS
 - 1 árbitro por partida/mesa.
-- árbitro pode também ser participante.
-- se o árbitro possuir partida na mesma DATA, ele é inelegível para arbitrar naquele dia inteiro.
-- sorteio aleatório entre árbitros elegíveis com balanceamento da quantidade de jogos.
-- evita escala simultânea quando houver horário informado.
-- substituição exige motivo e registra árbitro originalmente escalado, árbitro real, data/hora e operador que efetuou a troca.
-- histórico registra cadastro, alterações, sorteio, agenda e substituições.
-- atletas e árbitros consultam data, horário, mesa e arbitragem em /agenda.html.
+- árbitro que também joga fica inelegível para arbitrar em qualquer partida daquela data.
+- evita dupla escala no mesmo horário.
+- partidas só podem ser agendadas em datas previamente cadastradas como DISPONIVEL.
+- datas podem ser bloqueadas por FERIADO_NACIONAL, FERIADO_ESTADUAL, FERIADO_MUNICIPAL, EVENTO_ETEC, PATIO_INDISPONIVEL ou OUTRO.
+- cancelamento por força maior não gera W.O.; o status passa para CANCELADA_PARA_REMARCACAO.
+- remarcação exige nova data válida e registra agenda anterior, motivo, operador, quantidade de remarcações e ID da remarcação.
+- ao remarcar, a arbitragem é liberada e deve ser validada/sorteada novamente.
+- agenda pública exibe partidas remarcadas e cancelamentos aguardando nova data.
 
-6) Salve e publique NOVA VERSÃO da implantação do Web App.
+7) ENCERRAMENTO / ARQUIVO
+No ENCERRAMENTO_TORNEIO.gs inclua também PDFs das abas ARBITROS e CALENDARIO no pacote e inclua ARBITROS e CALENDARIO no fingerprint. No reset de nova edição, limpe ARBITROS e CALENDARIO depois de arquivá-los, pois os vínculos de árbitros-atletas pertencem à edição encerrada.
+
+8) Salve e publique NOVA VERSÃO da implantação do Web App.
