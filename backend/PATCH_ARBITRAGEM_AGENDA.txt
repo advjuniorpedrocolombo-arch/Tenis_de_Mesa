@@ -1,4 +1,4 @@
-PATCH – ÁRBITROS, CALENDÁRIO, AGENDA E REMARCAÇÃO
+PATCH – ÁRBITROS, CALENDÁRIO, AGENDA, CONFLITOS E REMARCAÇÃO
 
 1) No objeto SHEETS do Code.gs, acrescente:
 ARBITROS:'ARBITROS',CALENDARIO:'CALENDARIO'
@@ -7,17 +7,19 @@ ARBITROS:'ARBITROS',CALENDARIO:'CALENDARIO'
 if(a==='agendaPublica')return jsonResponse_({ok:true,jogos:listarAgendaPublicaV2_()});
 if(a==='adminArbitros'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,arbitros:listarArbitros_()});}
 if(a==='adminCalendario'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,datas:listarCalendario_()});}
+if(a==='adminConflitosAgenda'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(listarConflitosAgenda_());}
 
 3) Dentro de doPost(e), antes de ACAO_INVALIDA, acrescente:
 if(a==='adminSalvarArbitro'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarArbitro_(p,s.usuario));}
 if(a==='adminStatusArbitro'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(alterarStatusArbitro_(p,s.usuario));}
-if(a==='adminSalvarAgendaJogo'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarAgendaJogoSeguro_(p,s.usuario));}
+if(a==='adminSalvarAgendaJogo'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarAgendaJogoComConflitos_(p,s.usuario));}
 if(a==='adminSortearArbitros'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(sortearArbitros_(p,s.usuario));}
 if(a==='adminSubstituirArbitro'){const s=exigirSessao_(p.token);return jsonResponse_(substituirArbitro_(p,s.usuario));}
 if(a==='adminSalvarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarDataCalendario_(p,s.usuario));}
 if(a==='adminDesativarDataCalendario'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(desativarDataCalendario_(p,s.usuario));}
 if(a==='adminCancelarPartidaForcaMaior'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(cancelarPartidaForcaMaior_(p,s.usuario));}
 if(a==='adminRemarcarPartida'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(remarcarPartida_(p,s.usuario));}
+if(a==='adminBloquearDataEmMassa'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(bloquearDataEmMassa_(p,s.usuario));}
 
 4) No início de salvarResultadoJogo_(d,usuario), logo após validar idJogo, acrescente:
 const liberacaoAgenda=validarJogoPodeReceberResultado_(id);if(!liberacaoAgenda.ok)return liberacaoAgenda;
@@ -25,8 +27,9 @@ const liberacaoAgenda=validarJogoPodeReceberResultado_(id);if(!liberacaoAgenda.o
 Isso impede lançar resultado em partida CANCELADA_PARA_REMARCACAO.
 
 5) No projeto Apps Script crie e copie integralmente:
-- ARBITRAGEM_AGENDA.gs  <- backend/ARBITRAGEM_AGENDA.gs
+- ARBITRAGEM_AGENDA.gs <- backend/ARBITRAGEM_AGENDA.gs
 - CALENDARIO_REMARCACAO.gs <- backend/CALENDARIO_REMARCACAO.gs
+- CONFLITOS_BLOQUEIO.gs <- backend/CONFLITOS_BLOQUEIO.gs
 
 6) A planilha já está preparada com:
 - aba ARBITROS;
@@ -37,9 +40,12 @@ Isso impede lançar resultado em partida CANCELADA_PARA_REMARCACAO.
 REGRAS IMPLEMENTADAS
 - 1 árbitro por partida/mesa.
 - árbitro que também joga fica inelegível para arbitrar em qualquer partida daquela data.
-- evita dupla escala no mesmo horário.
+- evita dupla escala de árbitro no mesmo horário.
+- detector global aponta conflitos de mesa, atleta, árbitro, data bloqueada e campos de agenda ainda indefinidos.
+- ao salvar agenda, o backend bloqueia automaticamente mesa duplicada e atleta com duas partidas no mesmo horário.
 - partidas só podem ser agendadas em datas previamente cadastradas como DISPONIVEL.
 - datas podem ser bloqueadas por FERIADO_NACIONAL, FERIADO_ESTADUAL, FERIADO_MUNICIPAL, EVENTO_ETEC, PATIO_INDISPONIVEL ou OUTRO.
+- bloqueio em massa transforma todas as partidas pendentes daquela data em CANCELADA_PARA_REMARCACAO, preservando histórico e sem aplicar W.O.
 - cancelamento por força maior não gera W.O.; o status passa para CANCELADA_PARA_REMARCACAO.
 - remarcação exige nova data válida e registra agenda anterior, motivo, operador, quantidade de remarcações e ID da remarcação.
 - ao remarcar, a arbitragem é liberada e deve ser validada/sorteada novamente.
