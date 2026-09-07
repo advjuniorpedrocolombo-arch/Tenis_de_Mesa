@@ -27,7 +27,7 @@ jobs:
 
       - name: Commitar consolidação
         run: |
-          if git diff --quiet; then
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard)" ]; then
             echo 'Nenhuma alteração necessária.'
             exit 0
           fi
