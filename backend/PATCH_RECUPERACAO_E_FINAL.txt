@@ -1,27 +1,57 @@
-PATCH PARA O APPS SCRIPT
+PATCH ÚNICO PARA O APPS SCRIPT – RECUPERAÇÃO + FINAL + ENCERRAMENTO MESTRE
 
-1) Dentro de doPost(e), logo após:
+1) Dentro de doGet(e), logo após a rota jogosAdmin, adicione:
+
+if(a==='adminEncerramentoEstado'){
+  const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');
+  return jsonResponse_(obterEstadoEncerramento_());
+}
+
+2) Dentro de doPost(e), logo após:
 if(a==='adminLogout')return jsonResponse_(adminLogout_(p.token));
 
 adicione:
 if(a==='adminSolicitarRecuperacao')return jsonResponse_(solicitarRecuperacaoPin_(p));
 if(a==='adminRedefinirPin')return jsonResponse_(redefinirPinRecuperacao_(p));
 
-2) No projeto do Apps Script, crie um novo arquivo chamado RECUPERACAO_PIN.gs e copie integralmente o conteúdo de backend/RECUPERACAO_PIN.gs.
+3) Ainda dentro de doPost(e), antes de ACAO_INVALIDA, adicione:
 
-3) Dentro de salvarResultadoJogo_(d,usuario), logo após a linha que define fase, categoria, statusAnterior e melhorDe, adicione:
+if(a==='adminArquivarTorneio'){
+  const s=exigirSessao_(p.token,'ADMINISTRADOR');
+  return jsonResponse_(adminArquivarTorneio_(p,s.usuario));
+}
+if(a==='adminResetarTorneio'){
+  const s=exigirSessao_(p.token,'ADMINISTRADOR');
+  return jsonResponse_(adminResetarTorneio_(p,s.usuario));
+}
+
+4) No projeto do Apps Script, crie dois arquivos e copie integralmente os conteúdos correspondentes do GitHub:
+
+RECUPERACAO_PIN.gs  <- backend/RECUPERACAO_PIN.gs
+ENCERRAMENTO_TORNEIO.gs <- backend/ENCERRAMENTO_TORNEIO.gs
+
+5) Dentro de salvarResultadoJogo_(d,usuario), logo após a linha que define fase, categoria, statusAnterior e melhorDe, adicione:
 
 if(fase==='FINAL'){
   const terceiro=listarJogos_().find(j=>j.categoria===categoria&&String(j.fase).toUpperCase()==='TERCEIRO_LUGAR');
   if(terceiro&&terceiro.status!=='FINALIZADO')return {ok:false,erro:'TERCEIRO_LUGAR_PENDENTE',mensagem:'A disputa de 3º lugar deve ser realizada antes da final.'};
 }
 
-REGRAS JÁ EXISTENTES NO BACKEND ATUAL
+6) Salve o projeto e publique uma NOVA VERSÃO do Web App:
+Implantar > Gerenciar implantações > Editar > Nova versão > Implantar.
+
+REGRAS DO ENCERRAMENTO MESTRE
+- Somente ADMINISTRADOR pode acessar.
+- Arquivar não apaga dados.
+- O arquivamento cria pasta no Drive, cópia integral da planilha e PDFs.
+- O reset exige o PIN do administrador e a palavra RESETAR.
+- O reset fica bloqueado se houver qualquer alteração depois do último arquivamento.
+- O reset limpa PARTICIPANTES, GRUPOS, JOGOS, CLASSIFICACAO, MATA_MATA e inicia novo HISTORICO.
+- OPERADORES, CONFIGURACOES e RANKING são preservados.
+
+REGRAS JÁ EXISTENTES NO BACKEND
 - Semifinal: melhor de 5 sets.
 - Disputa de 3º lugar: melhor de 5 sets.
 - Final: melhor de 5 sets.
-- W.O. simples disponível.
-- W.O. duplo disponível.
+- W.O. simples e W.O. duplo disponíveis.
 - A disputa de 3º lugar é gerada automaticamente a partir dos perdedores das semifinais.
-
-Após aplicar, salve e publique uma NOVA VERSÃO da implantação do Web App.
