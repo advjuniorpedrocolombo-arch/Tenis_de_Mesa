@@ -71,7 +71,8 @@
       const btn=document.getElementById('btnEnviar');btn.disabled=true;msg.textContent='Enviando...';
       const payload={action:'inscricao',nomeCompleto:document.getElementById('nomeCompleto').value,turma:document.getElementById('turma').value,modulo:document.getElementById('modulo').value,email:document.getElementById('email').value,categoria:document.getElementById('categoria').value,observacoes:document.getElementById('observacoes').value};
       try{
-        const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+        const body=new URLSearchParams(payload);
+        const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString()});
         const d=await r.json();
         msg.textContent=d.mensagem|| (d.ok?'Inscrição realizada com sucesso.':'Não foi possível realizar a inscrição.');
         if(d.ok)e.target.reset();
