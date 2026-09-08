@@ -10,6 +10,7 @@ on:
       - 'backend/reforcar_perfis.py'
       - 'backend/gerar_pacote_publicacao.py'
       - 'backend/FINANCEIRO.gs'
+      - 'backend/ARBITRAGEM_AGENDA.gs'
       - 'backend/INSCRICOES_CRONOGRAMA.gs'
       - 'backend/ENCERRAMENTO_TORNEIO.gs'
       - 'backend/CALENDARIO_REMARCACAO.gs'
