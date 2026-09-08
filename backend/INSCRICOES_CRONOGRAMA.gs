@@ -1,7 +1,7 @@
 function obterEstadoInscricoesCronograma_(){
   const statusBase=String(getConfig_('STATUS_INSCRICOES')||'ENCERRADAS').toUpperCase();
   const automatico=String(getConfig_('ENCERRAMENTO_INSCRICOES_AUTOMATICO')||'TRUE').toUpperCase()!=='FALSE';
-  const limiteRaw=String(getConfig_('DATA_HORA_ENCERRAMENTO_INSCRICOES')||'').trim();
+  const limiteRaw=normalizarDataHoraConfig_(getConfig_('DATA_HORA_ENCERRAMENTO_INSCRICOES'));
   const limite=parseDataHoraLocal_(limiteRaw);
   const agora=new Date();
   const expirou=!!(automatico&&limite&&agora.getTime()>=limite.getTime());
@@ -19,9 +19,9 @@ function obterEstadoInscricoesCronograma_(){
     valorInscricao:Number(getConfig_('VALOR_INSCRICAO')||0),
     pixChave:String(getConfig_('PIX_CHAVE')||'1599745-1709'),
     categorias:categoriasPermitidas_(),
-    dataSorteioGrupos:String(getConfig_('DATA_SORTEIO_GRUPOS')||''),
-    dataInicio:String(getConfig_('DATA_INICIO')||''),
-    dataFinalPrevista:String(getConfig_('DATA_FINAL_PREVISTA')||''),
+    dataSorteioGrupos:normalizarDataConfig_(getConfig_('DATA_SORTEIO_GRUPOS')),
+    dataInicio:normalizarDataConfig_(getConfig_('DATA_INICIO')),
+    dataFinalPrevista:normalizarDataConfig_(getConfig_('DATA_FINAL_PREVISTA')),
     ordemFinais:String(getConfig_('ORDEM_FINAIS')||'Recreativo|Mesatenistas'),
     fasesFinaisNoitesSeparadas:String(getConfig_('FASES_FINAIS_NOITES_SEPARADAS')||'SEMIFINAIS|TERCEIRO_LUGAR|FINAL_RECREATIVO|FINAL_MESATENISTAS')
   };
@@ -52,6 +52,7 @@ function salvarPlanejamentoInscricoes_(p,usuario){
   setConfig_('VALOR_INSCRICAO',tipo==='GRATUITA'?0:valor,'Valor da inscrição em reais');
   setConfig_('PIX_CHAVE',String(getConfig_('PIX_CHAVE')||'1599745-1709'),'Chave PIX para pagamento da inscrição');
   registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'PLANEJAMENTO_INSCRICOES_ATUALIZADO',entidade:'CONFIGURACOES',idRegistro:'PLANEJAMENTO',valorAnterior:'',valorNovo:JSON.stringify({limite,sorteio,inicio,finalPrev,ordem,tipoInscricao:tipo,valorInscricao:tipo==='GRATUITA'?0:valor}),observacoes:'Datas-chave, cobrança e regras de encerramento das inscrições atualizadas.'});
+  SpreadsheetApp.flush();
   return {ok:true,mensagem:'Planejamento salvo com sucesso.',estado:obterEstadoInscricoesCronograma_()};
 }
 
@@ -74,7 +75,23 @@ function reabrirInscricoes_(p,usuario){
 
 function parseDataHoraLocal_(s){
   s=String(s||'').trim();if(!s)return null;
-  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);if(!m)return null;
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:T|\s)(\d{2}):(\d{2})$/);if(!m)return null;
   const d=new Date(Number(m[1]),Number(m[2])-1,Number(m[3]),Number(m[4]),Number(m[5]),0,0);
   return isNaN(d.getTime())?null:d;
+}
+
+function normalizarDataConfig_(v){
+  if(v===null||v===undefined||v==='')return '';
+  if(Object.prototype.toString.call(v)==='[object Date]'&&!isNaN(v.getTime()))return Utilities.formatDate(v,Session.getScriptTimeZone()||'America/Sao_Paulo','yyyy-MM-dd');
+  const s=String(v).trim();if(!s||s.toUpperCase()==='A DEFINIR')return s;
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];
+  const d=new Date(s);return isNaN(d.getTime())?s:Utilities.formatDate(d,Session.getScriptTimeZone()||'America/Sao_Paulo','yyyy-MM-dd');
+}
+
+function normalizarDataHoraConfig_(v){
+  if(v===null||v===undefined||v==='')return '';
+  if(Object.prototype.toString.call(v)==='[object Date]'&&!isNaN(v.getTime()))return Utilities.formatDate(v,Session.getScriptTimeZone()||'America/Sao_Paulo',"yyyy-MM-dd'T'HH:mm");
+  const s=String(v).trim();if(!s)return '';
+  const m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:T|\s)(\d{2}):(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3]+'T'+m[4]+':'+m[5];
+  const d=new Date(s);return isNaN(d.getTime())?s:Utilities.formatDate(d,Session.getScriptTimeZone()||'America/Sao_Paulo',"yyyy-MM-dd'T'HH:mm");
 }
