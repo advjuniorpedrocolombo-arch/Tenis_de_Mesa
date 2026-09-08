@@ -561,6 +561,21 @@ function localizarLancamentoInscricaoAtivo_(idParticipante){
 }
 
 function confirmarPagamentoFinanceiro_(p,usuario){
+  if(p&&p.pagamentos){
+    let itens=[];
+    try{itens=typeof p.pagamentos==='string'?JSON.parse(p.pagamentos):p.pagamentos}catch(_){return {ok:false,erro:'LOTE_INVALIDO',mensagem:'A seleção de pagamentos é inválida.'}}
+    if(!Array.isArray(itens)||!itens.length)return {ok:false,erro:'LOTE_VAZIO',mensagem:'Selecione pelo menos uma inscrição pendente.'};
+    if(itens.length>100)return {ok:false,erro:'LOTE_MUITO_GRANDE',mensagem:'Confirme no máximo 100 inscrições por vez.'};
+    const resultados=[];
+    itens.forEach(item=>{
+      try{
+        const r=confirmarPagamentoFinanceiro_({idParticipante:item.idParticipante||item.id,formaPagamento:item.formaPagamento},usuario);
+        resultados.push({idParticipante:item.idParticipante||item.id,ok:!!r.ok,mensagem:r.mensagem||r.erro||''});
+      }catch(err){resultados.push({idParticipante:item.idParticipante||item.id,ok:false,mensagem:String(err&&err.message||err)})}
+    });
+    const confirmados=resultados.filter(x=>x.ok).length,falhas=resultados.length-confirmados;
+    return {ok:confirmados>0,confirmados,falhas,resultados,mensagem:falhas?confirmados+' pagamento(s) confirmado(s) e '+falhas+' não processado(s).':confirmados+' pagamento(s) confirmado(s) com sucesso e lançado(s) no caixa.',estado:listarFinanceiro_()};
+  }
   assegurarEstruturaFinanceira_();
   const id=limparTexto_(p.idParticipante),forma=String(p.formaPagamento||'').trim().toUpperCase();
   if(!id)return {ok:false,erro:'ID_OBRIGATORIO',mensagem:'Participante não informado.'};
