@@ -27,7 +27,7 @@ function garantirColunasFinanceiras_(sh,headers){
 }
 
 function exigirSessaoFinanceiro_(token){
-  const s=exigirSessao_(token);
+  const s=exigirSessao_(token,'FINANCEIRO_OU_ADMIN');
   if(!['ADMINISTRADOR','FINANCEIRO'].includes(String(s.usuario.nivel||'').toUpperCase()))throw new Error('ACESSO_NEGADO|Acesso restrito ao financeiro ou administrador.');
   return s;
 }
