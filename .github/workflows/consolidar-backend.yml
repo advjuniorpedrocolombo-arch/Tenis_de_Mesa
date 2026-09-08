@@ -7,6 +7,7 @@ on:
       - '.github/workflows/consolidar-backend.yml'
       - 'backend/consolidar_backend.py'
       - 'backend/gerar_pacote_publicacao.py'
+      - 'backend/INSCRICOES_CRONOGRAMA.gs'
       - 'backend/ENCERRAMENTO_TORNEIO.gs'
       - 'backend/CALENDARIO_REMARCACAO.gs'
 
