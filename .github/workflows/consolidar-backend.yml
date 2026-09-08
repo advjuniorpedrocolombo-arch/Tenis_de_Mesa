@@ -7,13 +7,13 @@ on:
       - '.github/workflows/consolidar-backend.yml'
       - 'backend/consolidar_backend.py'
       - 'backend/aplicar_financeiro.py'
+      - 'backend/reforcar_perfis.py'
       - 'backend/gerar_pacote_publicacao.py'
       - 'backend/FINANCEIRO.gs'
       - 'backend/INSCRICOES_CRONOGRAMA.gs'
       - 'backend/ENCERRAMENTO_TORNEIO.gs'
       - 'backend/CALENDARIO_REMARCACAO.gs'
-      - 'admin/index.html'
-      - 'admin/financeiro.html'
+      - 'admin/*.html'
 
 permissions:
   contents: write
@@ -32,6 +32,9 @@ jobs:
       - name: Aplicar integração financeira
         run: python backend/aplicar_financeiro.py
 
+      - name: Reforçar isolamento de perfis
+        run: python backend/reforcar_perfis.py
+
       - name: Gerar pacote único do Apps Script
         run: python backend/gerar_pacote_publicacao.py
 
@@ -43,6 +46,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add admin/index.html backend/Code.gs backend/ARBITRAGEM_AGENDA.gs backend/ENCERRAMENTO_TORNEIO.gs backend/APPS_SCRIPT_COMPLETO.gs
+          git add admin/*.html backend/Code.gs backend/FINANCEIRO.gs backend/ARBITRAGEM_AGENDA.gs backend/ENCERRAMENTO_TORNEIO.gs backend/APPS_SCRIPT_COMPLETO.gs
           git commit -m 'Gerar backend consolidado para publicação'
           git push
