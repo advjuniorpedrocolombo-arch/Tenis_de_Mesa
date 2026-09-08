@@ -4,6 +4,7 @@ arquivos = [
     'backend/Code.gs',
     'backend/RECUPERACAO_PIN.gs',
     'backend/INSCRICOES_CRONOGRAMA.gs',
+    'backend/FINANCEIRO.gs',
     'backend/ARBITRAGEM_AGENDA.gs',
     'backend/CALENDARIO_REMARCACAO.gs',
     'backend/CONFLITOS_BLOQUEIO.gs',
