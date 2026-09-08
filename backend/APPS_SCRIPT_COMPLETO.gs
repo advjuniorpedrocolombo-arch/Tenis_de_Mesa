@@ -36,6 +36,7 @@ function doGet(e){
     if(a==='adminCalendario'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,datas:listarCalendario_()});}
     if(a==='adminConflitosAgenda'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(listarConflitosAgenda_());}
     if(a==='adminPlanejamento'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(obterEstadoInscricoesCronograma_());}
+    if(a==='financeiroEstado'){const s=exigirSessaoFinanceiro_(e.parameter.token);return jsonResponse_({...listarFinanceiro_(),usuario:s.usuario});}
     return jsonResponse_({ok:false,erro:'ACAO_INVALIDA'});
   }catch(err){return erroJson_(err);}
 }
@@ -79,6 +80,9 @@ function doPost(e){
     if(a==='adminSalvarPlanejamento'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarPlanejamentoInscricoes_(p,s.usuario));}
     if(a==='adminEncerrarInscricoes'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(encerrarInscricoesAgora_(p,s.usuario));}
     if(a==='adminReabrirInscricoes'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(reabrirInscricoes_(p,s.usuario));}
+    if(a==='financeiroConfirmarPagamento'){const s=exigirSessaoFinanceiro_(p.token);return jsonResponse_(confirmarPagamentoFinanceiro_(p,s.usuario));}
+    if(a==='financeiroLancamentoCaixa'){const s=exigirSessaoFinanceiro_(p.token);return jsonResponse_(registrarLancamentoCaixa_(p,s.usuario));}
+    if(a==='financeiroEstornarPagamento'){const s=exigirSessaoFinanceiro_(p.token);return jsonResponse_(estornarPagamentoFinanceiro_(p,s.usuario));}
     return jsonResponse_({ok:false,erro:'ACAO_INVALIDA'});
   }catch(err){return erroJson_(err);}
   finally{try{lock.releaseLock()}catch(_){}}
