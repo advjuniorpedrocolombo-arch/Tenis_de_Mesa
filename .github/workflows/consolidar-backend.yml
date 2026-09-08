@@ -26,11 +26,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Aplicar integração financeira
-        run: python backend/aplicar_financeiro.py
-
       - name: Consolidar backend
         run: python backend/consolidar_backend.py
+
+      - name: Aplicar integração financeira
+        run: python backend/aplicar_financeiro.py
 
       - name: Gerar pacote único do Apps Script
         run: python backend/gerar_pacote_publicacao.py
