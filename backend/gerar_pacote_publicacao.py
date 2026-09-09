@@ -13,6 +13,7 @@ arquivos = [
     'backend/CONFLITOS_BLOQUEIO.gs',
     'backend/ENCERRAMENTO_TORNEIO.gs',
     'backend/ENCERRAMENTO_EXTENSOES.gs',
+    'backend/PERFORMANCE_V1.gs',
 ]
 
 partes = [
