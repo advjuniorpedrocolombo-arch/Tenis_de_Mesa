@@ -77,3 +77,74 @@ function gerarPrimeiraFaseMataMata_(categoria,classificados,usuario){
   // na geração da fase seguinte junto aos vencedores dos jogos disputados.
   if(confrontos.every(c=>!c.b))avancarMataMataSePronto_(categoria,fase,usuario);
 }
+
+// Distribui os vencedores vindos de BYE contra vencedores de partidas disputadas.
+// Isso protege os melhores classificados: dois atletas que receberam BYE não se
+// enfrentam entre si na fase seguinte quando há adversários vindos dos jogos.
+function ordenarVencedoresComByesProtegidos_(winners){
+  const byes=winners.filter(x=>x.veioDeBye);
+  const jogados=winners.filter(x=>!x.veioDeBye);
+  if(!byes.length||!jogados.length)return winners.slice();
+  const ordem=[];
+  while(byes.length||jogados.length){
+    if(byes.length)ordem.push(byes.shift());
+    if(jogados.length)ordem.push(jogados.shift());
+  }
+  return ordem;
+}
+
+// Override da progressão automática do mata-mata.
+// Regra permanente para Mesatenistas e Recreativo:
+// se dois melhores atletas avançarem por BYE, eles ficam em lados diferentes
+// da chave e aguardam vencedores das partidas anteriores. Só podem se encontrar
+// numa fase posterior (por exemplo, na final, quando os BYEs foram para a semifinal).
+function avancarMataMataSePronto_(categoria,fase,usuario){
+  if(String(getConfig_('GERACAO_PROXIMA_FASE_AUTOMATICA')||'TRUE').toUpperCase()==='FALSE')return;
+  fase=String(fase||'').toUpperCase();
+  if(fase==='FINAL'||fase==='TERCEIRO_LUGAR')return;
+
+  const atual=listarMataMata_().filter(x=>x.categoria===categoria&&x.fase===fase);
+  if(!atual.length||atual.some(x=>!['FINALIZADO','BYE'].includes(x.status)))return;
+
+  let winners=atual.slice().sort((a,b)=>a.ordem-b.ordem).filter(x=>x.idVencedor).map(x=>({
+    id:x.idVencedor,
+    nome:x.vencedor,
+    origem:'Vencedor '+nomeFaseCurto_(fase)+' '+x.ordem,
+    from:x.id,
+    veioDeBye:String(x.status||'').toUpperCase()==='BYE'
+  }));
+  if(!winners.length)return;
+
+  if(fase==='SEMIFINAL'){
+    if(winners.length===1){
+      if(!listarMataMata_().some(x=>x.categoria===categoria&&x.fase==='FINAL'))
+        criarConfronto_(categoria,'FINAL',1,winners[0],null,winners[0].origem,'BYE','Final decidida por avanço automático após ausência dupla no outro confronto.');
+      return;
+    }
+    if(!listarMataMata_().some(x=>x.categoria===categoria&&x.fase==='FINAL')){
+      const idFinal=criarConfronto_(categoria,'FINAL',1,winners[0],winners[1],winners[0].origem,winners[1].origem,'Final gerada automaticamente após as semifinais.');
+      atual.forEach(x=>atualizarProximoConfronto_(x.id,idFinal));
+    }
+    const disputa=String(getConfig_('DISPUTA_TERCEIRO_LUGAR')||'TRUE').toUpperCase()!=='FALSE';
+    const losers=atual.filter(x=>x.idPerdedor).sort((a,b)=>a.ordem-b.ordem).map(x=>({id:x.idPerdedor,nome:x.perdedor,origem:'Perdedor Semifinal '+x.ordem,from:x.id}));
+    if(disputa&&losers.length===2&&!listarMataMata_().some(x=>x.categoria===categoria&&x.fase==='TERCEIRO_LUGAR'))
+      criarConfronto_(categoria,'TERCEIRO_LUGAR',1,losers[0],losers[1],losers[0].origem,losers[1].origem,'Disputa de terceiro lugar gerada automaticamente.');
+    return;
+  }
+
+  const prox=fasePorQuantidade_(winners.length);
+  if(listarMataMata_().some(x=>x.categoria===categoria&&x.fase===prox))return;
+
+  // Antes de montar a próxima fase, separa os beneficiados por BYE.
+  // Caso clássico: 6 classificados -> 2 BYEs + 2 vencedores das quartas.
+  // Resultado: Semifinal 1 = BYE 1 x vencedor QF; Semifinal 2 = BYE 2 x vencedor QF.
+  winners=ordenarVencedoresComByesProtegidos_(winners);
+
+  for(let i=0;i<winners.length;i+=2){
+    const a=winners[i],b=winners[i+1]||null;
+    const id=criarConfronto_(categoria,prox,(i/2)+1,a,b,a.origem,b?b.origem:'BYE','Fase seguinte gerada automaticamente com proteção dos classificados que receberam BYE.');
+    atualizarProximoConfronto_(a.from,id);
+    if(b)atualizarProximoConfronto_(b.from,id);
+  }
+  if(winners.length===1||winners.length%2===1)avancarMataMataSePronto_(categoria,prox,usuario);
+}
