@@ -13,6 +13,7 @@ on:
       - 'backend/aplicar_arbitros_partidas.py'
       - 'backend/aplicar_tela_arbitros_agenda.py'
       - 'backend/aplicar_visual_partidas_fases.py'
+      - 'backend/aplicar_partidas_ux.py'
       - 'backend/gerar_pacote_publicacao.py'
       - 'backend/FINANCEIRO.gs'
       - 'backend/ARBITRAGEM_AGENDA.gs'
@@ -55,6 +56,9 @@ jobs:
 
       - name: Organizar tela de partidas por fases
         run: python backend/aplicar_visual_partidas_fases.py
+
+      - name: Melhorar atualização e recolhimento das fases
+        run: python backend/aplicar_partidas_ux.py
 
       - name: Gerar pacote único do Apps Script
         run: python backend/gerar_pacote_publicacao.py
