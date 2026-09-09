@@ -8,6 +8,7 @@ arquivos = [
     'backend/ARBITRAGEM_AGENDA.gs',
     'backend/CALENDARIO_REMARCACAO.gs',
     'backend/AGENDA_AUTOMATICA.gs',
+    'backend/MATA_MATA_AGENDA.gs',
     'backend/CONFLITOS_BLOQUEIO.gs',
     'backend/ENCERRAMENTO_TORNEIO.gs',
     'backend/ENCERRAMENTO_EXTENSOES.gs',
