@@ -54,20 +54,21 @@ function salvarAgendaJogo_(p,usuario){
 
 function arbitroJogadorConflita_(arbitro,jogo,jogos){
   if(!arbitro||!arbitro.idParticipante)return false;
-  const pid=String(arbitro.idParticipante),mesmaData=x=>String(x.data||'')===String(jogo.data||''),mesmoHorario=x=>String(x.horario||'')===String(jogo.horario||'');
+  const pid=String(arbitro.idParticipante),mesmaData=x=>String(x.data||'')===String(jogo.data||''),slotJogo=String(jogo.horario||'NOITE'),mesmoHorario=x=>String(x.horario||'NOITE')===slotJogo;
   if(String(jogo.idA||'')===pid||String(jogo.idB||'')===pid)return true;
-  if(!jogo.data||!jogo.horario)return false;
+  if(!jogo.data)return false;
   return jogos.some(x=>x.id!==jogo.id&&mesmaData(x)&&mesmoHorario(x)&&(String(x.idA||'')===pid||String(x.idB||'')===pid));
 }
 
 function arbitroJaEscaladoMesmoHorario_(idArbitro,jogo,jogos){
-  if(!idArbitro||!jogo.data||!jogo.horario)return false;
-  return jogos.some(x=>x.id!==jogo.id&&String(x.data||'')===String(jogo.data||'')&&String(x.horario||'')===String(jogo.horario||'')&&(x.idArbitroReal===idArbitro||x.idArbitroEscalado===idArbitro));
+  if(!idArbitro||!jogo.data)return false;
+  const slot=String(jogo.horario||'NOITE');
+  return jogos.some(x=>x.id!==jogo.id&&String(x.data||'')===String(jogo.data||'')&&String(x.horario||'NOITE')===slot&&(x.idArbitroReal===idArbitro||x.idArbitroEscalado===idArbitro));
 }
 
 function sortearArbitros_(p,usuario){
-  const todosJogos=lerJogosArbitragem_(),jogos=todosJogos.filter(j=>j.status!=='FINALIZADO'&&j.status!=='CANCELADA_PARA_REMARCACAO'&&j.data&&j.horario&&j.mesa),arbitros=listarArbitros_().filter(a=>a.status==='ATIVO');
-  if(!jogos.length)return {ok:false,erro:'SEM_JOGOS_AGENDADOS',mensagem:'Não existem partidas pendentes com data, horário e mesa completamente definidos.'};
+  const todosJogos=lerJogosArbitragem_(),jogos=todosJogos.filter(j=>j.status!=='FINALIZADO'&&j.status!=='CANCELADA_PARA_REMARCACAO'&&j.data&&j.mesa),arbitros=listarArbitros_().filter(a=>a.status==='ATIVO');
+  if(!jogos.length)return {ok:false,erro:'SEM_JOGOS_AGENDADOS',mensagem:'Não existem partidas pendentes com data e mesa definidas.'};
   if(!arbitros.length)return {ok:false,erro:'SEM_ARBITROS',mensagem:'Cadastre ao menos um árbitro ativo.'};
 
   const porData={};jogos.forEach(j=>(porData[j.data]||(porData[j.data]=[])).push(j));
@@ -76,18 +77,18 @@ function sortearArbitros_(p,usuario){
     const jogosDia=porData[data],usoDia={},ocupacao=new Set();
     jogosDia.forEach(j=>{
       const idExistente=j.idArbitroReal||j.idArbitroEscalado;
-      if(idExistente&&j.horario)ocupacao.add(String(j.horario)+'|'+String(idExistente));
+      if(idExistente)ocupacao.add(String(j.horario||'NOITE')+'|'+String(idExistente));
     });
     jogosDia.sort((a,b)=>String(a.horario).localeCompare(String(b.horario))||String(a.mesa).localeCompare(String(b.mesa))||String(a.id).localeCompare(String(b.id))).forEach(j=>{
       const elegiveis=arbitros.filter(a=>{
         if(arbitroJogadorConflita_(a,j,todosJogos)){bloqueiosJogador++;return false;}
-        if(ocupacao.has(String(j.horario)+'|'+String(a.id)))return false;
+        if(ocupacao.has(String(j.horario||'NOITE')+'|'+String(a.id)))return false;
         if(arbitroJaEscaladoMesmoHorario_(a.id,j,todosJogos))return false;
         return true;
       });
       if(!elegiveis.length){definirArbitroJogo_(j.id,'','','','','SEM_ARBITRO');semArbitro.push(j.id);return;}
       const min=Math.min(...elegiveis.map(a=>usoDia[a.id]||0)),pool=elegiveis.filter(a=>(usoDia[a.id]||0)===min),arb=pool[Math.floor(Math.random()*pool.length)];
-      usoDia[arb.id]=(usoDia[arb.id]||0)+1;ocupacao.add(String(j.horario)+'|'+String(arb.id));
+      usoDia[arb.id]=(usoDia[arb.id]||0)+1;ocupacao.add(String(j.horario||'NOITE')+'|'+String(arb.id));
       j.idArbitroEscalado=arb.id;j.idArbitroReal=arb.id;j.arbitroEscalado=arb.nome;j.arbitroReal=arb.nome;
       definirArbitroJogo_(j.id,arb.id,arb.nome,arb.id,arb.nome,'ESCALADO');escalados++;
     });
