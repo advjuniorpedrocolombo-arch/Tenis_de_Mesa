@@ -10,6 +10,7 @@ on:
       - 'backend/aplicar_financeiro.py'
       - 'backend/reforcar_perfis.py'
       - 'backend/aplicar_agenda_manual.py'
+      - 'backend/aplicar_arbitros_partidas.py'
       - 'backend/gerar_pacote_publicacao.py'
       - 'backend/FINANCEIRO.gs'
       - 'backend/ARBITRAGEM_AGENDA.gs'
@@ -41,6 +42,9 @@ jobs:
 
       - name: Aplicar agenda manual
         run: python backend/aplicar_agenda_manual.py
+
+      - name: Integrar árbitros às partidas
+        run: python backend/aplicar_arbitros_partidas.py
 
       - name: Gerar pacote único do Apps Script
         run: python backend/gerar_pacote_publicacao.py
