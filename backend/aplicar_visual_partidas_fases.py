@@ -3,6 +3,11 @@ from pathlib import Path
 p=Path('admin/partidas.html')
 text=p.read_text(encoding='utf-8')
 
+# Se a tela já está organizada por fases, não tente reaplicar o patch.
+if 'function renderPartidasPorFase(lista,cat,st)' in text and 'function renderByesNaSemifinal(cat)' in text:
+    print('Visualização por fases já aplicada.')
+    raise SystemExit(0)
+
 # Título da área
 text=text.replace('<section class="card sec"><h2>Fila de partidas</h2><div id="fila" class="fila"></div></section>', '<section class="card sec"><h2>Partidas por fase</h2><div id="fila" class="fila"></div></section>', 1)
 
