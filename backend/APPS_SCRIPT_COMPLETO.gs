@@ -975,12 +975,13 @@ function agendarJogosGruposAutomaticamente_(usuario){
   }
   if(seguranca>=1000&& (ir<rec.length||im<mes.length))throw new Error('AGENDA_SEM_DATAS|Não foi possível encontrar datas úteis suficientes no calendário.');
   SpreadsheetApp.flush();
-  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'AGENDA_GRUPOS_GERADA',entidade:'JOGOS',idRegistro:'LOTE',valorAnterior:'',valorNovo:JSON.stringify({agendados,noites,recreativo:rec.length,mesatenistas:mes.length}),observacoes:'Agenda automática: segunda a sexta, até 2 partidas por noite, uma Recreativo na Mesa 1 e uma Mesatenistas na Mesa 2; datas bloqueadas ignoradas.'});
-  return {ok:true,agendados,noites,mensagem:agendados+' partida(s) distribuída(s) em '+noites+' noite(s), respeitando dias úteis e bloqueios.'};
+  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'AGENDA_GRUPOS_GERADA',entidade:'JOGOS',idRegistro:'LOTE',valorAnterior:'',valorNovo:JSON.stringify({agendados,noites,recreativo:rec.length,mesatenistas:mes.length,horario:'20:30'}),observacoes:'Agenda automática: segunda a sexta, até 2 partidas por noite, uma Recreativo na Mesa 1 e uma Mesatenistas na Mesa 2; datas bloqueadas ignoradas; horário padrão 20h30–21h.'});
+  return {ok:true,agendados,noites,mensagem:agendados+' partida(s) distribuída(s) em '+noites+' noite(s), respeitando dias úteis, bloqueios e horário padrão de 20h30 às 21h.'};
 }
 
 function gravarAgendaAutomaticaLinha_(sh,idx,linha,data,mesa){
   if(idx.DATA!==undefined)sh.getRange(linha,idx.DATA+1).setValue(data);
+  if(idx.HORARIO_PREVISTO!==undefined)sh.getRange(linha,idx.HORARIO_PREVISTO+1).setValue('20:30');
   if(idx.MESA!==undefined)sh.getRange(linha,idx.MESA+1).setValue(mesa);
   if(idx.STATUS_AGENDA!==undefined)sh.getRange(linha,idx.STATUS_AGENDA+1).setValue('AGENDADA');
 }
