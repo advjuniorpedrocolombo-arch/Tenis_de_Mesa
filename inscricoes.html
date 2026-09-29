@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscrições – Torneio de Tênis de Mesa – Etec</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#eef2f7;color:#1f2937}.topo{background:#111827;color:#fff;padding:28px 18px}.topo .inner,.wrap{max-width:920px;margin:auto}.topo h1{margin:0;font-size:clamp(28px,5vw,42px)}.topo p{margin:8px 0 0;color:#d1d5db}.wrap{padding:24px 16px 40px}.grid{display:grid;grid-template-columns:1.4fr .8fr;gap:18px}.card{background:#fff;border-radius:16px;padding:22px;box-shadow:0 6px 20px rgba(0,0,0,.07)}h2{margin-top:0}label{display:block;font-weight:700;margin-top:13px;font-size:14px}input,select,textarea,button{width:100%;padding:12px 13px;border-radius:9px;font-size:15px}input,select,textarea{border:1px solid #cbd5e1;background:#fff;margin-top:6px}textarea{min-height:88px;resize:vertical}button{margin-top:16px;border:0;background:#111827;color:#fff;font-weight:700;cursor:pointer}button:disabled{opacity:.55;cursor:not-allowed}.status{padding:12px 14px;border-radius:10px;font-weight:700;margin-bottom:16px}.aberta{background:#dcfce7;color:#166534}.fechada{background:#fee2e2;color:#991b1b}.info{background:#eff6ff;color:#1e3a8a}.msg{margin-top:14px;font-weight:700;line-height:1.45}.erro{color:#b91c1c}.sucesso{color:#166534}.meta{font-size:14px;color:#6b7280;line-height:1.55}.links{display:grid;gap:9px;margin-top:16px}.links a{display:block;text-decoration:none;padding:11px 12px;border-radius:9px;background:#f3f4f6;color:#111827;font-weight:700}.valor{font-size:28px;font-weight:800;margin:8px 0}.oculto{display:none!important}@media(max-width:760px){.grid{grid-template-columns:1fr}.topo{text-align:center}}
+  </style>
+</head>
+<body>
+<header class="topo"><div class="inner"><h1>🏓 Inscrições – Torneio de Tênis de Mesa</h1><p>Etec</p></div></header>
+<main class="wrap">
+  <div id="statusBox" class="status info">Consultando período de inscrições...</div>
+  <div class="grid">
+    <section class="card"><h2>Ficha de inscrição</h2><form id="formInscricao">
+      <label for="nome">Nome completo</label><input id="nome" name="nomeCompleto" required autocomplete="name">
+      <label for="turma">Turma</label><input id="turma" name="turma" required placeholder="Ex.: 1º TANE">
+      <label for="modulo">Módulo / série</label><input id="modulo" name="modulo" placeholder="Ex.: 1º módulo">
+      <label for="email">E-mail</label><input id="email" name="email" type="email" required autocomplete="email">
+      <label for="categoria">Categoria</label><select id="categoria" name="categoria" required><option value="">Carregando categorias...</option></select>
+      <div id="pagamentoBox" class="oculto"><label for="formaPagamento">Forma de pagamento</label><select id="formaPagamento" name="formaPagamento"><option value="PIX">PIX</option><option value="DINHEIRO">Dinheiro</option></select></div>
+      <label for="observacoes">Observações</label><textarea id="observacoes" name="observacoes" placeholder="Opcional"></textarea>
+      <button id="btnEnviar" type="submit" disabled>Enviar inscrição</button><div id="msg" class="msg"></div>
+    </form></section>
+    <aside class="card"><h2>Informações</h2><div id="nomeTorneio" class="meta"></div><div id="tipoInfo" class="meta"></div><div id="valorBox" class="oculto"><div class="valor" id="valorInscricao"></div><div class="meta">Chave PIX: <strong id="pixChave"></strong></div></div><div id="encerramento" class="meta" style="margin-top:12px"></div><div class="links"><a href="./index.html">Página inicial</a><a href="./acompanhar.html">Acompanhar participantes</a><a href="./agenda.html">Agenda de partidas</a><a href="./resultado-final.html">Resultados</a></div></aside>
+  </div>
+</main>
+<script>
+const API_URL='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';let inscricoesAbertas=false;
+function moeda(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
+function formatarDataHora(v){if(!v)return '';const d=new Date(String(v).trim().replace(' ','T'));return isNaN(d)?v:d.toLocaleString('pt-BR')}
+async function carregarEstado(){const box=document.getElementById('statusBox');try{const r=await fetch(API_URL+'?action=status&_='+Date.now(),{cache:'no-store'});const d=await r.json();if(!d.ok)throw new Error(d.mensagem||d.erro||'Falha ao consultar inscrições.');inscricoesAbertas=String(d.statusInscricoes||'').toUpperCase()==='ABERTAS';box.className='status '+(inscricoesAbertas?'aberta':'fechada');box.textContent=inscricoesAbertas?'Inscrições abertas.':'Inscrições encerradas no momento.';document.getElementById('nomeTorneio').textContent=d.torneio||'';document.getElementById('tipoInfo').textContent='Tipo de inscrição: '+(d.tipoInscricao==='GRATUITA'?'gratuita':'paga');if(d.dataHoraEncerramento)document.getElementById('encerramento').textContent='Encerramento previsto: '+formatarDataHora(d.dataHoraEncerramento);const cats=Array.isArray(d.categorias)?d.categorias:[];document.getElementById('categoria').innerHTML='<option value="">Selecione</option>'+cats.map(c=>'<option value="'+String(c).replace(/"/g,'&quot;')+'">'+c+'</option>').join('');const paga=String(d.tipoInscricao||'').toUpperCase()!=='GRATUITA';document.getElementById('pagamentoBox').classList.toggle('oculto',!paga);document.getElementById('valorBox').classList.toggle('oculto',!paga);if(paga){document.getElementById('valorInscricao').textContent=moeda(d.valorInscricao);document.getElementById('pixChave').textContent=d.pixChave||''}document.getElementById('btnEnviar').disabled=!inscricoesAbertas}catch(e){inscricoesAbertas=false;document.getElementById('btnEnviar').disabled=true;box.className='status fechada';box.textContent='Não foi possível verificar a abertura das inscrições.';const m=document.getElementById('msg');m.className='msg erro';m.textContent=e.message}}
+document.getElementById('formInscricao').addEventListener('submit',async e=>{e.preventDefault();if(!inscricoesAbertas)return;const btn=document.getElementById('btnEnviar'),m=document.getElementById('msg');btn.disabled=true;m.className='msg';m.textContent='Enviando inscrição...';try{const fd=new FormData(e.currentTarget),body=new URLSearchParams();body.set('action','inscricao');for(const [k,v] of fd.entries())body.set(k,v);const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString()});const d=await r.json();if(!d.ok)throw new Error(d.mensagem||d.erro||'Não foi possível realizar a inscrição.');m.className='msg sucesso';m.textContent=d.mensagem||'Inscrição recebida com sucesso.';e.currentTarget.reset();await carregarEstado()}catch(err){m.className='msg erro';m.textContent=err.message;btn.disabled=!inscricoesAbertas}});
+carregarEstado();
+</script>
+</body>
+</html>
