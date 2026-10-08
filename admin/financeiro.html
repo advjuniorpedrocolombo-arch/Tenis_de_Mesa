@@ -35,13 +35,19 @@ function calcularResumoLocal(){const caixaAtivo=(dados.caixa||[]).filter(x=>Stri
 // Os lançamentos antigos continuam disponíveis na movimentação e para auditoria.
 function resumoMovimentacaoAtual(){
  const itens=[...(dados.caixa||[])].filter(x=>String(x.status||'ATIVO').toUpperCase()==='ATIVO')
-   .sort((a,b)=>new Date(a.dataHora).getTime()-new Date(b.dataHora).getTime());
- let ultimo=-1;
+  .sort((a,b)=>new Date(a.dataHora).getTime()-new Date(b.dataHora).getTime());
+ // A zeragem pode ocorrer somente por estornos, sem gerar categoria ZERAGEM.
+ // Nesse caso, a última posição em que o acumulado ficou zero é o corte do caixa.
+ let corte=0,acumuladoCentavos=0;
  for(let i=0;i<itens.length;i++){
-  const x=itens[i];
-  if(String(x.categoria||'').toUpperCase()==='ZERAGEM' && /zeragem|zerar|ajuste/i.test(String(x.descricao||'')))ultimo=i;
+  const x=itens[i],tipo=String(x.tipo||'').toUpperCase();
+  const centavos=Math.round(Number(x.valor||0)*100);
+  acumuladoCentavos+=tipo==='ENTRADA'?centavos:-centavos;
+  const zeragem=String(x.categoria||'').toUpperCase()==='ZERAGEM'
+   || /zeragem geral do financeiro/i.test(String(x.descricao||'')+' '+String(x.observacoes||''));
+  if(zeragem||acumuladoCentavos===0)corte=i+1;
  }
- const atuais=itens.slice(ultimo+1);
+ const atuais=itens.slice(corte);
  return {
   entradas:atuais.filter(x=>String(x.tipo||'').toUpperCase()==='ENTRADA').reduce((s,x)=>s+Number(x.valor||0),0),
   saidas:atuais.filter(x=>String(x.tipo||'').toUpperCase()==='SAIDA').reduce((s,x)=>s+Number(x.valor||0),0)
