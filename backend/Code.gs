@@ -39,6 +39,7 @@ function doPost(e){
     if(a==='adminSalvarOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminSalvarOperador_(p,s.usuario));}
     if(a==='adminStatusOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminStatusOperador_(p,s.usuario));}
     if(a==='adminDefinirCabeca'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminDefinirCabeca_(p,s.usuario));}
+    if(a==='adminSalvarCabecasCategoria'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarCabecasCategoria_(p,s.usuario));}
     if(a==='sorteioIniciar'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(iniciarSorteio_(p,s.usuario));}
     if(a==='sorteioAdicionar'){const s=exigirSessao_(p.token);return jsonResponse_(adicionarAoGrupo_(p,s.usuario));}
     if(a==='sorteioRemover'){const s=exigirSessao_(p.token);return jsonResponse_(removerDoGrupo_(p,s.usuario));}
@@ -129,6 +130,25 @@ function adminDefinirCabeca_(d,usuario){
   return {ok:true,mensagem:ativo?'Cabeça de chave definido com sucesso.':'Participante removido dos cabeças de chave.'};
 }
 
+function salvarCabecasCategoria_(d,usuario){
+  const categoria=limparTexto_(d.categoria);
+  if(!categoriasPermitidas_().includes(categoria))return {ok:false,erro:'CATEGORIA_INVALIDA',mensagem:'Categoria inválida.'};
+  if(obterLinhasGrupo_(categoria).length)return {ok:false,erro:'SORTEIO_JA_INICIADO',mensagem:'O sorteio já começou. Não é possível alterar os cabeças de chave sem uma correção administrativa.'};
+  const ids=String(d.idsCabecas||'').split(',').map(x=>x.trim()).filter(Boolean),selecionados=new Set(ids);
+  if(selecionados.size!==ids.length)return {ok:false,erro:'IDS_DUPLICADOS',mensagem:'Existem participantes duplicados na seleção.'};
+  const participantes=obterParticipantesValidos_().filter(p=>participanteAptoSorteio_(p)&&(p.categoriaValidada||p.categoriaEscolhida)===categoria);
+  const aptos=new Set(participantes.map(p=>String(p.id)));
+  if(ids.some(id=>!aptos.has(id)))return {ok:false,erro:'PARTICIPANTE_INVALIDO',mensagem:'A seleção contém participante não aprovado ou de outra categoria.'};
+  const sh=getSheet_(SHEETS.PARTICIPANTES),idx=indexHeaders_(getHeaders_(sh));
+  if(idx.CABECA_DE_CHAVE===undefined||idx.ORDEM_CABECA_CHAVE===undefined)throw new Error('Colunas de cabeças de chave não encontradas.');
+  const linhas=participantes.map(p=>({p,linha:localizarLinhaPorValor_(sh,idx.ID_PARTICIPANTE+1,p.id)}));
+  if(linhas.some(x=>x.linha<2))throw new Error('Participante não localizado na planilha.');
+  // Duas etapas evitam colisões quando a ordem dos cabeças de chave muda.
+  linhas.forEach(x=>{sh.getRange(x.linha,idx.CABECA_DE_CHAVE+1).setValue(false);sh.getRange(x.linha,idx.ORDEM_CABECA_CHAVE+1).clearContent()});
+  ids.forEach((id,i)=>{const x=linhas.find(y=>String(y.p.id)===id);sh.getRange(x.linha,idx.CABECA_DE_CHAVE+1).setValue(true);sh.getRange(x.linha,idx.ORDEM_CABECA_CHAVE+1).setValue(i+1)});
+  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'CABECAS_CATEGORIA_SALVOS',entidade:'PARTICIPANTES',idRegistro:categoria,valorAnterior:'',valorNovo:JSON.stringify({ids}),observacoes:'Salvamento em lote dos cabeças de chave.'});
+  return {ok:true,mensagem:ids.length+' cabeça(s) de chave salvo(s) na categoria '+categoria+'.'};
+}
 function obterEstadoSorteio_(categoria){
   categoria=limparTexto_(categoria);if(!categoriasPermitidas_().includes(categoria))throw new Error('CATEGORIA_INVALIDA|Categoria inválida.');
   const participantes=obterParticipantesValidos_().filter(p=>participanteAptoSorteio_(p)&&(p.categoriaValidada||p.categoriaEscolhida)===categoria),linhas=obterLinhasGrupo_(categoria),ids=new Set(linhas.map(x=>x.idParticipante)),grupos={};
