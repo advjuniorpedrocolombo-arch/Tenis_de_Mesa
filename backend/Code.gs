@@ -39,7 +39,6 @@ function doPost(e){
     if(a==='adminSalvarOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminSalvarOperador_(p,s.usuario));}
     if(a==='adminStatusOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminStatusOperador_(p,s.usuario));}
     if(a==='adminDefinirCabeca'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminDefinirCabeca_(p,s.usuario));}
-    if(a==='adminSalvarCabecasCategoria'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(salvarCabecasCategoria_(p,s.usuario));}
     if(a==='sorteioIniciar'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(iniciarSorteio_(p,s.usuario));}
     if(a==='sorteioAdicionar'){const s=exigirSessao_(p.token);return jsonResponse_(adicionarAoGrupo_(p,s.usuario));}
     if(a==='sorteioRemover'){const s=exigirSessao_(p.token);return jsonResponse_(removerDoGrupo_(p,s.usuario));}
