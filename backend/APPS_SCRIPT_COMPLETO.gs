@@ -160,6 +160,26 @@ function iniciarSorteio_(d,usuario){
   cabecas.forEach((p,i)=>{const letra=letraGrupo_(i),nome='Grupo '+letra;gravarObjetoPrimeiraLinhaLivre_(SHEETS.GRUPOS,'ID_GRUPO',{ID_GRUPO:'GR-'+slugCategoria_(categoria)+'-'+letra,CATEGORIA:categoria,NOME_GRUPO:nome,ORDEM:i+1,ID_PARTICIPANTE:p.id,NOME_PARTICIPANTE:p.nome,POSICAO_SORTEIO:0,CABECA_DE_CHAVE:true,DATA_GERACAO:new Date(),STATUS:'EM_SORTEIO'})});
   registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'SORTEIO_INICIADO',entidade:'GRUPOS',idRegistro:categoria,valorAnterior:'',valorNovo:JSON.stringify({grupos:cabecas.length}),observacoes:'Cabeças de chave posicionados automaticamente, um por grupo.'});return {ok:true,mensagem:'Sorteio iniciado. Os cabeças de chave já foram posicionados nos grupos.'};
 }
+function repararGruposSorteio_(d,usuario){
+  const categoria=limparTexto_(d.categoria);
+  if(!categoriasPermitidas_().includes(categoria))return {ok:false,erro:'CATEGORIA_INVALIDA',mensagem:'Categoria inválida.'};
+  const estado=obterEstadoSorteio_(categoria);
+  if(estado.status==='FINALIZADO')return {ok:false,erro:'SORTEIO_FINALIZADO',mensagem:'Sorteio finalizado: não é permitido alterar grupos.'};
+  if(estado.status!=='EM_SORTEIO')return {ok:false,erro:'SORTEIO_NAO_INICIADO',mensagem:'Inicie o sorteio antes de reparar os grupos.'};
+  const cabecas=estado.cabecas.slice().sort((a,b)=>Number(a.ordemCabecaChave)-Number(b.ordemCabecaChave));
+  const idsExistentes=new Set(obterLinhasGrupo_(categoria).map(x=>String(x.idParticipante)));
+  const gruposExistentes=new Set(estado.grupos.map(g=>g.nome));
+  let criados=0;
+  for(let i=0;i<cabecas.length;i++){
+    const p=cabecas[i],letra=letraGrupo_(i),nome='Grupo '+letra;
+    if(idsExistentes.has(String(p.id)))continue;
+    if(gruposExistentes.has(nome))return {ok:false,erro:'GRUPO_OCUPADO',mensagem:nome+' já existe, mas o cabeça de chave esperado não está nele. Verifique os dados antes de corrigir.'};
+    gravarObjetoPrimeiraLinhaLivre_(SHEETS.GRUPOS,'ID_GRUPO',{ID_GRUPO:'GR-'+slugCategoria_(categoria)+'-'+letra,CATEGORIA:categoria,NOME_GRUPO:nome,ORDEM:i+1,ID_PARTICIPANTE:p.id,NOME_PARTICIPANTE:p.nome,POSICAO_SORTEIO:0,CABECA_DE_CHAVE:true,DATA_GERACAO:new Date(),STATUS:'EM_SORTEIO'});
+    idsExistentes.add(String(p.id));gruposExistentes.add(nome);criados++;
+  }
+  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'GRUPOS_REPARADOS',entidade:'GRUPOS',idRegistro:categoria,valorAnterior:'',valorNovo:JSON.stringify({criados}),observacoes:'Reconciliação não destrutiva dos grupos dos cabeças de chave.'});
+  return {ok:true,mensagem:criados?criados+' grupo(s) ausente(s) criado(s), sem alterar os grupos existentes.':'Todos os grupos já estão presentes.'};
+}
 function adicionarAoGrupo_(d,usuario){
   const categoria=limparTexto_(d.categoria),id=limparTexto_(d.idParticipante),nomeGrupo=limparTexto_(d.nomeGrupo),estado=obterEstadoSorteio_(categoria);if(estado.status!=='EM_SORTEIO')return {ok:false,erro:'SORTEIO_NAO_ABERTO',mensagem:'O sorteio desta categoria não está aberto.'};const p=estado.naoSorteados.find(x=>x.id===id);if(!p)return {ok:false,erro:'PARTICIPANTE_INDISPONIVEL',mensagem:'Participante não disponível para sorteio.'};const g=estado.grupos.find(x=>x.nome===nomeGrupo);if(!g)return {ok:false,erro:'GRUPO_INVALIDO',mensagem:'Grupo inválido.'};const pos=obterLinhasGrupo_(categoria).filter(x=>!x.cabecaDeChave).length+1;
   gravarObjetoPrimeiraLinhaLivre_(SHEETS.GRUPOS,'ID_GRUPO',{ID_GRUPO:g.idGrupo,CATEGORIA:categoria,NOME_GRUPO:g.nome,ORDEM:g.ordem,ID_PARTICIPANTE:p.id,NOME_PARTICIPANTE:p.nome,POSICAO_SORTEIO:pos,CABECA_DE_CHAVE:false,DATA_GERACAO:new Date(),STATUS:'EM_SORTEIO'});registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'PARTICIPANTE_SORTEADO',entidade:'GRUPOS',idRegistro:p.id,valorAnterior:'',valorNovo:g.nome,observacoes:'Participante lançado durante sorteio ao vivo.'});return {ok:true,mensagem:p.nome+' inserido no '+g.nome+'.'};
