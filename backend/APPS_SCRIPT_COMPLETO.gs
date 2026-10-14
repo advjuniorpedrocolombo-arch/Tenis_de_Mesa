@@ -163,6 +163,12 @@ function salvarCabecasCategoria_(d,usuario){
   registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'CABECAS_CATEGORIA_SALVOS',entidade:'PARTICIPANTES',idRegistro:categoria,valorAnterior:'',valorNovo:JSON.stringify({ids}),observacoes:'Salvamento em lote dos cabeças de chave.'});
   return {ok:true,mensagem:ids.length+' cabeça(s) de chave salvo(s) na categoria '+categoria+'.'};
 }
+function participanteAptoSorteio_(p){
+  if(!p||!p.ativo||String(p.statusInscricao||'').toUpperCase()!=='APROVADO')return false;
+  const tipo=String(p.tipoInscricao||'').toUpperCase();
+  const pagamento=String(p.statusPagamento||'').toUpperCase();
+  return tipo==='GRATUITA'||pagamento==='ISENTO'||pagamento==='PAGO'||pagamento==='CONFIRMADO';
+}
 function obterEstadoSorteio_(categoria){
   categoria=limparTexto_(categoria);if(!categoriasPermitidas_().includes(categoria))throw new Error('CATEGORIA_INVALIDA|Categoria inválida.');
   const participantes=obterParticipantesValidos_().filter(p=>participanteAptoSorteio_(p)&&(p.categoriaValidada||p.categoriaEscolhida)===categoria),linhas=obterLinhasGrupo_(categoria),ids=new Set(linhas.map(x=>x.idParticipante)),grupos={};
