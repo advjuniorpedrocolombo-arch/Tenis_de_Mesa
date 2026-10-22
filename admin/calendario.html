@@ -87,6 +87,20 @@ function conflitosLocais(){
    mapa.get(id).motivos.push('EXCESSO_PARTIDAS_NO_DIA ('+lista.length+' jogos em '+fmt(dt)+')');
   }
  }
+ const hojeLocal=hojeBrasil();
+ // Noites isoladas: só criar remarcação se existir outra noite futura com jogo pendente compatível.
+ const singles=[...porDia].filter(([dt,l])=>dt>=hojeLocal&&!bloqueioPorData(dt)&&l.length===1&&jogoPendente(l[0])).sort((a,b)=>a[0].localeCompare(b[0]));
+ const reservadas=new Set();
+ for(let i=0;i<singles.length;i++){
+  const [destino,base]=singles[i];
+  if(reservadas.has(destino)||mapa.has(String(base[0].id)))continue;
+  for(let k=singles.length-1;k>i;k--){
+   const [origem,lista]=singles[k],candidato=lista[0];
+   if(reservadas.has(origem)||mapa.has(String(candidato.id))||String(candidato.fase||'').toUpperCase()!=='GRUPOS'||String(candidato.categoria||'').toUpperCase()===String(base[0].categoria||'').toUpperCase())continue;
+   mapa.set(String(candidato.id),{j:candidato,motivos:['APENAS_UM_JOGO_NO_DIA'],destinoPreferencial:destino});
+   reservadas.add(destino);reservadas.add(origem);break;
+  }
+ }
  return mapa;
 }
 async function atualizarConflitos(){
@@ -98,10 +112,15 @@ async function atualizarConflitos(){
 function exibirConflitos(d){
  const locais=conflitosLocais(), ids=new Set(locais.keys());
  const remotos=(d.conflitos||[]).filter(c=>!(String(c.tipo||'').toUpperCase()==='DATA_INVALIDA_OU_BLOQUEADA'&&(c.jogos||[]).every(id=>ids.has(String(id)))));
- el('resConflitos').innerHTML='Conflitos do servidor: <b>'+esc(d.total||0)+'</b> • Partidas pendentes para correção (datas passadas, bloqueadas ou excesso diário): <b>'+locais.size+'</b>';
+ el('resConflitos').innerHTML='Conflitos do servidor: <b>'+esc(d.total||0)+'</b> • Partidas pendentes para correção (datas passadas, bloqueadas, excesso diário ou agrupamento): <b>'+locais.size+'</b>';
+ const noites=new Map(),hoje=hojeBrasil();
+ for(const j of jogos){const dt=normaliza(j.data);if(!dt||dt<hoje||String(j.status||'').toUpperCase()==='CANCELADA_PARA_REMARCACAO')continue;noites.set(dt,(noites.get(dt)||0)+1)}
+ const unicas=[...noites].filter(([dt,n])=>n===1&&!bloqueioPorData(dt)).sort((a,b)=>a[0].localeCompare(b[0]));
+ el('resConflitos').innerHTML+=' • Noites com apenas um jogo: <b>'+unicas.length+'</b>';
+ const avisos=unicas.map(([dt])=>'<div class="conflito aviso"><b>APENAS_UM_JOGO_NO_DIA</b> — '+esc(fmt(dt))+' possui somente uma partida. Será completada quando houver outra pendente compatível.</div>').join('');
  const html=[...locais.values()].map(({j,motivos})=>'<div class="conflito"><b>'+esc(motivos.join(' + '))+'</b> — '+esc(j.jogadorA)+' × '+esc(j.jogadorB)+' • '+esc(fmt(j.data))+'<div class="meta">Partida: '+esc(j.id)+' • '+esc(j.categoria)+' • '+esc(j.status)+'</div></div>').join('');
- el('listaConflitos').innerHTML=html+remotos.map(x=>'<div class="conflito '+(x.severidade==='AVISO'?'aviso':'')+'"><b>'+esc(x.tipo)+'</b> — '+esc(x.mensagem)+'<div class="meta">Partida(s): '+esc((x.jogos||[]).join(', '))+'</div></div>').join('');
- if(!locais.size&&!remotos.length)el('listaConflitos').innerHTML='<div class="meta">Nenhum conflito detectado.</div>';
+ el('listaConflitos').innerHTML=html+avisos+remotos.map(x=>'<div class="conflito '+(x.severidade==='AVISO'?'aviso':'')+'"><b>'+esc(x.tipo)+'</b> — '+esc(x.mensagem)+'<div class="meta">Partida(s): '+esc((x.jogos||[]).join(', '))+'</div></div>').join('');
+ if(!locais.size&&!remotos.length&&!unicas.length)el('listaConflitos').innerHTML='<div class="meta">Nenhum conflito detectado.</div>';
  return locais;
 }
 async function verificarConflitos(){
@@ -121,11 +140,14 @@ function planoRemarcacoes(locais){
   quantidadePorDia.set(dt,(quantidadePorDia.get(dt)||0)+1);
  }
  const plano=[], impossiveis=[], hoje=hojeBrasil();
+ const preferidas=new Map([...locais.values()].filter(x=>x.destinoPreferencial).map(x=>[String(x.j.id),x.destinoPreferencial]));
  for(const j of selecionados.sort((a,b)=>normaliza(a.data).localeCompare(normaliza(b.data))||String(a.id).localeCompare(String(b.id)))){
   if(!['GRUPOS'].includes(String(j.fase||'').toUpperCase())){impossiveis.push(j);continue}
   let dt='',hor='';
-  for(let n=0;n<180;n++){
-    const dia=diasDepois(hoje,n);
+  const preferida=preferidas.get(String(j.id));
+  const datas=Array.from({length:180},(_,n)=>diasDepois(hoje,n));
+  datas.sort((a,b)=>{if(a===preferida)return -1;if(b===preferida)return 1;const qa=quantidadePorDia.get(a)||0,qb=quantidadePorDia.get(b)||0;return Number(qb===1)-Number(qa===1)||a.localeCompare(b)});
+  for(const dia of datas){
     if(!diaUtil(dia)||bloqueioPorData(dia)||(quantidadePorDia.get(dia)||0)>=2||ocupados.has(dia+'|'+String(j.categoria||'').toUpperCase()))continue;
     const h=horarioLegivel(j.horario);
     hor=/^\d\d:\d\d$/.test(h)?h:'20:00';
