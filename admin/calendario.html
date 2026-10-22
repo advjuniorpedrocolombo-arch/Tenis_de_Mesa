@@ -30,7 +30,7 @@
 </section>
 </div>
 <section class="card"><h2>Dias bloqueados</h2><div id="msgCal" class="msg"></div><div class="tabela"><table><thead><tr><th>Data</th><th>Motivo</th><th>Descrição</th><th>Ação</th></tr></thead><tbody id="tb"></tbody></table></div></section>
-<section class="card sec"><div class="toolbar"><h2 style="margin:0;flex:1">Detector de conflitos</h2><button class="btn azul" onclick="verificarConflitos()">🔎 Verificar agenda</button><button id="btnResolverConflitos" class="btn prim" onclick="resolverConflitos()" style="background:#15803d">📅 Remarcar pendentes</button></div><div id="resConflitos" class="meta" style="margin-top:10px">Execute a verificação depois de alterar dias bloqueados.</div><div id="listaConflitos"></div><div class="conflito aviso"><b>Remarcação automática suspensa</b> — Foi identificado que o gerador do servidor pode agendar partidas em datas passadas. A execução automática foi desabilitada até que o servidor considere a data atual como limite mínimo. Use a remarcação manual somente para datas de hoje em diante.</div><div id="msgResolver" class="msg" role="status"></div></section>
+<section class="card sec"><div class="toolbar"><h2 style="margin:0;flex:1">Detector de conflitos</h2><button class="btn azul" onclick="verificarConflitos()">🔎 Verificar agenda</button><button id="btnResolverConflitos" class="btn prim" onclick="resolverConflitos()" style="background:#15803d">📅 Remarcar pendentes</button></div><div id="resConflitos" class="meta" style="margin-top:10px">Execute a verificação depois de alterar dias bloqueados.</div><div id="listaConflitos"></div><div class="warn">A remarcação neste calendário atua apenas em partidas pendentes de grupos com data passada ou bloqueada. Confira a prévia antes de confirmar. O gerador geral permanece suspenso.</div><div id="msgResolver" class="msg" role="status"></div></section>
 <section class="card sec"><h2>Partidas programadas</h2><p class="meta">Use esta área quando ocorrer força maior em apenas uma partida.</p><div id="programadas"></div><div id="msgCanc" class="msg"></div></section>
 <section class="card sec"><h2>Partidas canceladas / remarcação</h2><div id="canceladas"></div><div id="msgRem" class="msg"></div></section>
 </main>
@@ -50,41 +50,103 @@ function renderSelecao(){const arr=[...selecionadas].sort();el('qtdSel').textCon
 async function salvarSelecionadas(){const arr=[...selecionadas].sort();if(!arr.length)return alert('Selecione pelo menos uma data no calendário.');if(!confirm('Confirmar o bloqueio de '+arr.length+' data(s)?'))return;el('msgForm').className='msg';el('msgForm').textContent='Salvando...';const d=await post({action:'adminBloquearDatasCalendario',token,datas:JSON.stringify(arr),tipoBloqueio:el('tipo').value,descricao:el('descricao').value,observacoes:el('obs').value});el('msgForm').className='msg '+(d.ok?'sucesso':'erro');el('msgForm').textContent=d.mensagem||d.erro;if(d.ok){selecionadas.clear();el('descricao').value='';el('obs').value='';await carregar();await verificarConflitos()}}
 function renderTabela(){el('tb').innerHTML=cal.length?cal.map(x=>`<tr><td><b>${esc(fmt(x.data))}</b></td><td><span class="pill">${esc(rotuloTipo(x.tipoBloqueio))}</span></td><td>${esc(x.descricao||'—')}</td><td><button class="btn vermelho" onclick="excluirBloqueio('${ea(x.id)}','${ea(fmt(x.data))}')">Excluir dia bloqueado</button></td></tr>`).join(''):'<tr><td colspan="4">Nenhum dia bloqueado. Todas as datas estão disponíveis.</td></tr>'}
 async function excluirBloqueio(id,dataFmt){if(!confirm('Excluir o bloqueio de '+dataFmt+'? A data voltará a ficar disponível para jogos.'))return;const d=await post({action:'adminExcluirDataCalendario',token,idData:id});if(!d.ok)return alert(d.mensagem||d.erro);await carregar();alert(d.mensagem)}
-async function verificarConflitos(){el('resConflitos').textContent='Verificando...';el('listaConflitos').innerHTML='';try{const d=await(await fetch(API_URL+'?action=adminConflitosAgenda&token='+encodeURIComponent(token)+'&_='+Date.now(),{cache:'no-store'})).json();if(!d.ok)throw new Error(d.mensagem||d.erro);el('resConflitos').innerHTML=`Total: <b>${d.total}</b> • Erros: <b>${d.erros}</b> • Avisos: <b>${d.avisos}</b>`;el('listaConflitos').innerHTML=(d.conflitos||[]).map(c=>`<div class="conflito ${c.severidade==='AVISO'?'aviso':''}"><b>${esc(c.tipo)}</b> — ${esc(c.mensagem)}<div class="meta">Partida(s): ${esc((c.jogos||[]).join(', '))}</div></div>`).join('')}catch(e){el('resConflitos').innerHTML='<span class="erro">'+esc(e.message)+'</span>'}}
 
-/* Integração com o gerador de agenda já existente no sistema.
-   Não cria/exclui jogos e não escreve resultados. Confirma antes de executar.
-   O backend existente redistribui as partidas pendentes de GRUPOS, não somente as conflitantes. */
+/* Datas locais brasileiras: evita UTC e considera sempre o dia atual. */
+function hojeBrasil(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())}
+function jogoPendente(j){return ['AGENDADO','REMARCADA','PENDENTE'].includes(String(j.status||'').toUpperCase())&&!j.tipoResultado&&!(Number(j.setsA)>0||Number(j.setsB)>0)&&!j.vencedor}
+function diasDepois(dt,n){const d=new Date(dt+'T12:00:00');d.setDate(d.getDate()+n);return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
+function diaUtil(dt){const k=new Date(dt+'T12:00:00').getDay();return k>=1&&k<=5}
+function conflitosLocais(){
+ const hoje=hojeBrasil(), mapa=new Map();
+ for(const j of jogos){
+   const dt=normaliza(j.data);if(!dt||!jogoPendente(j))continue;
+   const motivos=[];
+   if(dt<hoje)motivos.push('DATA_PASSADA_PENDENTE');
+   if(bloqueioPorData(dt))motivos.push('DATA_INVALIDA_OU_BLOQUEADA');
+   if(motivos.length)mapa.set(String(j.id),{j,motivos});
+ }
+ return mapa;
+}
+async function atualizarConflitos(){
+ await carregar();
+ const d=await fetch(API_URL+'?action=adminConflitosAgenda&token='+encodeURIComponent(token)+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.json());
+ if(!d.ok)throw new Error(d.mensagem||d.erro||'Falha ao verificar agenda');
+ return d;
+}
+function exibirConflitos(d){
+ const locais=conflitosLocais(), ids=new Set(locais.keys());
+ const remotos=(d.conflitos||[]).filter(c=>!(String(c.tipo||'').toUpperCase()==='DATA_INVALIDA_OU_BLOQUEADA'&&(c.jogos||[]).every(id=>ids.has(String(id)))));
+ el('resConflitos').innerHTML='Conflitos do servidor: <b>'+esc(d.total||0)+'</b> • Partidas pendentes em datas passadas ou bloqueadas: <b>'+locais.size+'</b>';
+ const html=[...locais.values()].map(({j,motivos})=>'<div class="conflito"><b>'+esc(motivos.join(' + '))+'</b> — '+esc(j.jogadorA)+' × '+esc(j.jogadorB)+' • '+esc(fmt(j.data))+'<div class="meta">Partida: '+esc(j.id)+' • '+esc(j.categoria)+' • '+esc(j.status)+'</div></div>').join('');
+ el('listaConflitos').innerHTML=html+remotos.map(x=>'<div class="conflito '+(x.severidade==='AVISO'?'aviso':'')+'"><b>'+esc(x.tipo)+'</b> — '+esc(x.mensagem)+'<div class="meta">Partida(s): '+esc((x.jogos||[]).join(', '))+'</div></div>').join('');
+ if(!locais.size&&!remotos.length)el('listaConflitos').innerHTML='<div class="meta">Nenhum conflito detectado.</div>';
+ return locais;
+}
+async function verificarConflitos(){
+ el('resConflitos').textContent='Verificando...';el('listaConflitos').innerHTML='';
+ try{exibirConflitos(await atualizarConflitos())}
+ catch(e){el('resConflitos').innerHTML='<span class="erro">'+esc(e.message)+'</span>'}
+}
+/* Plano conservador: uma partida por categoria em cada noite útil,
+   sem sobrescrever jogos não conflitantes. Todas as vagas são calculadas antes da confirmação. */
+function planoRemarcacoes(locais){
+ const selecionados=[...locais.values()].map(x=>x.j);
+ const ids=new Set(selecionados.map(x=>String(x.id)));
+ const ocupados=new Set();
+ for(const j of jogos){
+  const dt=normaliza(j.data);if(!dt||ids.has(String(j.id))||j.status==='CANCELADA_PARA_REMARCACAO')continue;
+  ocupados.add(dt+'|'+String(j.categoria||'').toUpperCase());
+ }
+ const plano=[], impossiveis=[], hoje=hojeBrasil();
+ for(const j of selecionados.sort((a,b)=>normaliza(a.data).localeCompare(normaliza(b.data))||String(a.id).localeCompare(String(b.id)))){
+  if(!['GRUPOS'].includes(String(j.fase||'').toUpperCase())){impossiveis.push(j);continue}
+  let dt='',hor='';
+  for(let n=0;n<180;n++){
+    const dia=diasDepois(hoje,n);
+    if(!diaUtil(dia)||bloqueioPorData(dia)||ocupados.has(dia+'|'+String(j.categoria||'').toUpperCase()))continue;
+    const h=horarioLegivel(j.horario);
+    hor=/^\d\d:\d\d$/.test(h)?h:'20:00';
+    if(dia===hoje){const agora=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());if(hor<=agora)continue}
+    dt=dia;break;
+  }
+  if(!dt){impossiveis.push(j);continue}
+  ocupados.add(dt+'|'+String(j.categoria||'').toUpperCase());
+  plano.push({j,data:dt,horario:hor,mesa:j.mesa||''});
+ }
+ return {plano,impossiveis};
+}
 let resolvendoConflitos=false;
 async function resolverConflitos(){
-  if(resolvendoConflitos)return;
-  alert('Remarcação automática temporariamente suspensa: o gerador do servidor está produzindo datas anteriores a hoje. Utilize a remarcação manual em uma data futura até a correção do servidor. Nenhuma partida foi alterada.');return;
-  const btn=el('btnResolverConflitos'),msg=el('msgResolver');
-  resolvendoConflitos=true;btn.disabled=true;msg.className='msg';msg.textContent='Conferindo os conflitos com o servidor...';
-  try{
-    const d=await fetch(API_URL+'?action=adminConflitosAgenda&token='+encodeURIComponent(token)+'&_='+Date.now(),{cache:'no-store'}).then(r=>r.json());
-    if(!d.ok)throw new Error(d.mensagem||d.erro||'Não foi possível consultar os conflitos.');
-    const ids=new Set((d.conflitos||[]).filter(c=>String(c.tipo||'').toUpperCase()==='DATA_INVALIDA_OU_BLOQUEADA')
-      .flatMap(c=>c.jogos||[]).map(String));
-    if(!ids.size){msg.className='msg sucesso';msg.textContent='Não há partidas em datas bloqueadas para redistribuir.';return;}
-    await carregar();
-    const encontrados=jogos.filter(j=>ids.has(String(j.id)));
-    const pendentes=encontrados.filter(j=>String(j.fase||'').toUpperCase()==='GRUPOS'
-      &&['AGENDADO','REMARCADA','PENDENTE'].includes(String(j.status||'').toUpperCase())
-      &&!j.tipoResultado&&!(Number(j.setsA)>0||Number(j.setsB)>0));
-    const protegidos=encontrados.length-pendentes.length;
-    const outrosPendentes=jogos.filter(j=>String(j.fase||'').toUpperCase()==='GRUPOS'
-      &&['AGENDADO','REMARCADA','PENDENTE'].includes(String(j.status||'').toUpperCase())&&!ids.has(String(j.id))).length;
-    if(!pendentes.length){msg.className='msg erro';msg.textContent='Os conflitos identificados não incluem partidas de grupos claramente pendentes. Verifique manualmente as fases eliminatórias ou os status.';return;}
-    if(!confirm('Foram encontradas '+pendentes.length+' partida(s) pendente(s) de grupos em datas bloqueadas.\n\nIMPORTANTE: o gerador automático existente reorganiza TODAS as partidas pendentes da fase de grupos (inclusive até '+outrosPendentes+' sem conflito), não apenas as conflitantes. Partidas concluídas não devem ser alteradas.\n\n'+(protegidos?'Há '+protegidos+' partida(s) com status/fase que não podem ser tratadas por esta operação.\n\n':'')+'Deseja executar a atualização da agenda?')){msg.textContent='Operação cancelada. Nenhuma alteração solicitada.';return;}
-    msg.textContent='Atualizando agenda pelo gerador oficial...';
-    const resultado=await post({action:'adminGerarAgendaAutomatica',token});
-    if(!resultado.ok)throw new Error(resultado.mensagem||resultado.erro||'Falha ao gerar a agenda.');
-    await carregar();await verificarConflitos();
-    msg.className='msg sucesso';
-    msg.textContent='Atualização solicitada e concluída pelo servidor. '+(resultado.mensagem||'')+' Confira acima se os conflitos foram eliminados e verifique a agenda pública.';
-  }catch(e){msg.className='msg erro';msg.textContent='Remarcação não concluída: '+(e.message||e)}
-  finally{resolvendoConflitos=false;btn.disabled=false;}
+ if(resolvendoConflitos)return;
+ const btn=el('btnResolverConflitos'), msg=el('msgResolver');
+ resolvendoConflitos=true;btn.disabled=true;msg.className='msg';msg.textContent='Conferindo partidas e datas...';
+ try{
+  const d=await atualizarConflitos(),locais=exibirConflitos(d);
+  if(!locais.size){msg.className='msg sucesso';msg.textContent='Não há partidas pendentes em datas passadas ou bloqueadas.';return}
+  const {plano,impossiveis}=planoRemarcacoes(locais);
+  if(!plano.length){msg.className='msg erro';msg.textContent='Não há vagas adequadas na fase de grupos. Nenhuma partida foi alterada.';return}
+  const resumo=plano.map(p=>p.j.id+': '+fmt(p.j.data)+' → '+fmt(p.data)+' '+p.horario).join('\n');
+  if(!confirm('PRÉVIA — serão alteradas somente '+plano.length+' partida(s) pendente(s) em datas passadas ou bloqueadas.\n'+(impossiveis.length?'Partidas sem remarcação automática: '+impossiveis.length+'.\n':'')+'\n'+resumo+'\n\nA remarcação usa as operações individuais existentes de cancelamento e remarcação. Deseja confirmar?')){msg.textContent='Operação cancelada.';return}
+  let sucesso=0;const erros=[];
+  for(const p of plano){
+   msg.textContent='Remarcando '+(sucesso+erros.length+1)+' de '+plano.length+'...';
+   try{
+    /* Revalida o registro antes da primeira alteração. */
+    const atual=await fetch(API_URL+'?action=agendaPublica&_='+Date.now(),{cache:'no-store'}).then(r=>r.json());
+    const j=(atual.jogos||[]).find(x=>String(x.id)===String(p.j.id));
+    if(!j||!jogoPendente(j)||normaliza(j.data)!==normaliza(p.j.data))throw Error('Partida alterada desde a prévia');
+    const cancel=await post({action:'adminCancelarPartidaForcaMaior',token,idJogo:j.id,motivo:'Remarcação administrativa: data passada ou bloqueada'});
+    if(!cancel.ok)throw Error(cancel.mensagem||cancel.erro||'Falha ao cancelar para remarcação');
+    const rem=await post({action:'adminRemarcarPartida',token,idJogo:j.id,data:p.data,horario:p.horario,mesa:p.mesa,observacao:'Remarcação de conflito de calendário; data anterior: '+fmt(p.j.data)});
+    if(!rem.ok)throw Error('Partida cancelada para remarcação, mas nova data não foi aplicada: '+(rem.mensagem||rem.erro||'erro'));
+    sucesso++;
+   }catch(e){erros.push(p.j.id+': '+e.message);break}
+  }
+  await verificarConflitos();
+  msg.className='msg '+(erros.length?'erro':'sucesso');
+  msg.textContent=sucesso+' partida(s) remarcada(s). '+(erros.length?'Interrompido para evitar alterações adicionais: '+erros.join('; '):'Confira a agenda pública.')+(impossiveis.length?' '+impossiveis.length+' partida(s) exigem remarcação manual.':'');
+ }catch(e){msg.className='msg erro';msg.textContent=e.message||String(e)}
+ finally{resolvendoConflitos=false;btn.disabled=false}
 }
 
 function renderProgramadas(){const l=jogos.filter(j=>j.data&&j.status!=='FINALIZADO'&&j.status!=='CANCELADA_PARA_REMARCACAO');el('programadas').innerHTML=l.length?l.map(j=>`<div class="jogo"><div><b>${esc(j.jogadorA)} × ${esc(j.jogadorB)}</b><div class="meta">${esc(j.categoria)} • ${esc(j.fase)} • ${esc(fmt(j.data))} ${esc(horarioLegivel(j.horario))} • ${esc(j.mesa?'Mesa '+j.mesa:'Mesa a definir')}</div></div><div>${esc(j.status)}</div><div>${esc(j.arbitro||'Árbitro a definir')}</div><div><button class="btn vermelho" onclick="cancelar('${ea(j.id)}')">Cancelar por força maior</button></div></div>`).join(''):'<div class="meta">Nenhuma partida programada pendente.</div>'}
