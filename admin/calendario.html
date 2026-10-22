@@ -92,10 +92,11 @@ async function verificarConflitos(){
 function planoRemarcacoes(locais){
  const selecionados=[...locais.values()].map(x=>x.j);
  const ids=new Set(selecionados.map(x=>String(x.id)));
- const ocupados=new Set();
+ const ocupados=new Set(), quantidadePorDia=new Map();
  for(const j of jogos){
   const dt=normaliza(j.data);if(!dt||ids.has(String(j.id))||j.status==='CANCELADA_PARA_REMARCACAO')continue;
   ocupados.add(dt+'|'+String(j.categoria||'').toUpperCase());
+  quantidadePorDia.set(dt,(quantidadePorDia.get(dt)||0)+1);
  }
  const plano=[], impossiveis=[], hoje=hojeBrasil();
  for(const j of selecionados.sort((a,b)=>normaliza(a.data).localeCompare(normaliza(b.data))||String(a.id).localeCompare(String(b.id)))){
@@ -103,7 +104,7 @@ function planoRemarcacoes(locais){
   let dt='',hor='';
   for(let n=0;n<180;n++){
     const dia=diasDepois(hoje,n);
-    if(!diaUtil(dia)||bloqueioPorData(dia)||ocupados.has(dia+'|'+String(j.categoria||'').toUpperCase()))continue;
+    if(!diaUtil(dia)||bloqueioPorData(dia)||(quantidadePorDia.get(dia)||0)>=2||ocupados.has(dia+'|'+String(j.categoria||'').toUpperCase()))continue;
     const h=horarioLegivel(j.horario);
     hor=/^\d\d:\d\d$/.test(h)?h:'20:00';
     if(dia===hoje){const agora=new Intl.DateTimeFormat('en-GB',{timeZone:'America/Sao_Paulo',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date());if(hor<=agora)continue}
@@ -111,6 +112,7 @@ function planoRemarcacoes(locais){
   }
   if(!dt){impossiveis.push(j);continue}
   ocupados.add(dt+'|'+String(j.categoria||'').toUpperCase());
+  quantidadePorDia.set(dt,(quantidadePorDia.get(dt)||0)+1);
   plano.push({j,data:dt,horario:hor,mesa:j.mesa||''});
  }
  return {plano,impossiveis};
