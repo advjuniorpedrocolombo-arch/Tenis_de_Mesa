@@ -65,6 +65,28 @@ function conflitosLocais(){
    if(bloqueioPorData(dt))motivos.push('DATA_INVALIDA_OU_BLOQUEADA');
    if(motivos.length)mapa.set(String(j.id),{j,motivos});
  }
+ // Verifica o teto geral de duas partidas por dia, incluindo partidas finalizadas.
+ // Preserva partidas concluídas e seleciona somente os excedentes pendentes.
+ const porDia=new Map();
+ for(const j of jogos){
+  const dt=normaliza(j.data);
+  if(!dt||String(j.status||'').toUpperCase()==='CANCELADA_PARA_REMARCACAO')continue;
+  if(!porDia.has(dt))porDia.set(dt,[]);
+  porDia.get(dt).push(j);
+ }
+ for(const [dt,lista] of porDia){
+  if(lista.length<=2)continue;
+  const fixas=lista.filter(j=>!jogoPendente(j));
+  const pendentes=lista.filter(j=>jogoPendente(j)).sort((a,b)=>
+   Number(mapa.has(String(b.id)))-Number(mapa.has(String(a.id)))||
+   String(a.id).localeCompare(String(b.id)));
+  const manter=Math.max(0,2-fixas.length);
+  for(const j of pendentes.slice(manter)){
+   const id=String(j.id);
+   if(!mapa.has(id))mapa.set(id,{j,motivos:[]});
+   mapa.get(id).motivos.push('EXCESSO_PARTIDAS_NO_DIA ('+lista.length+' jogos em '+fmt(dt)+')');
+  }
+ }
  return mapa;
 }
 async function atualizarConflitos(){
@@ -76,7 +98,7 @@ async function atualizarConflitos(){
 function exibirConflitos(d){
  const locais=conflitosLocais(), ids=new Set(locais.keys());
  const remotos=(d.conflitos||[]).filter(c=>!(String(c.tipo||'').toUpperCase()==='DATA_INVALIDA_OU_BLOQUEADA'&&(c.jogos||[]).every(id=>ids.has(String(id)))));
- el('resConflitos').innerHTML='Conflitos do servidor: <b>'+esc(d.total||0)+'</b> • Partidas pendentes em datas passadas ou bloqueadas: <b>'+locais.size+'</b>';
+ el('resConflitos').innerHTML='Conflitos do servidor: <b>'+esc(d.total||0)+'</b> • Partidas pendentes para correção (datas passadas, bloqueadas ou excesso diário): <b>'+locais.size+'</b>';
  const html=[...locais.values()].map(({j,motivos})=>'<div class="conflito"><b>'+esc(motivos.join(' + '))+'</b> — '+esc(j.jogadorA)+' × '+esc(j.jogadorB)+' • '+esc(fmt(j.data))+'<div class="meta">Partida: '+esc(j.id)+' • '+esc(j.categoria)+' • '+esc(j.status)+'</div></div>').join('');
  el('listaConflitos').innerHTML=html+remotos.map(x=>'<div class="conflito '+(x.severidade==='AVISO'?'aviso':'')+'"><b>'+esc(x.tipo)+'</b> — '+esc(x.mensagem)+'<div class="meta">Partida(s): '+esc((x.jogos||[]).join(', '))+'</div></div>').join('');
  if(!locais.size&&!remotos.length)el('listaConflitos').innerHTML='<div class="meta">Nenhum conflito detectado.</div>';
@@ -124,11 +146,11 @@ async function resolverConflitos(){
  resolvendoConflitos=true;btn.disabled=true;msg.className='msg';msg.textContent='Conferindo partidas e datas...';
  try{
   const d=await atualizarConflitos(),locais=exibirConflitos(d);
-  if(!locais.size){msg.className='msg sucesso';msg.textContent='Não há partidas pendentes em datas passadas ou bloqueadas.';return}
+  if(!locais.size){msg.className='msg sucesso';msg.textContent='Não há partidas pendentes com datas passadas, bloqueadas ou excedentes ao limite de duas por dia.';return}
   const {plano,impossiveis}=planoRemarcacoes(locais);
   if(!plano.length){msg.className='msg erro';msg.textContent='Não há vagas adequadas na fase de grupos. Nenhuma partida foi alterada.';return}
   const resumo=plano.map(p=>p.j.id+': '+fmt(p.j.data)+' → '+fmt(p.data)+' '+p.horario).join('\n');
-  if(!confirm('PRÉVIA — serão alteradas somente '+plano.length+' partida(s) pendente(s) em datas passadas ou bloqueadas.\n'+(impossiveis.length?'Partidas sem remarcação automática: '+impossiveis.length+'.\n':'')+'\n'+resumo+'\n\nA remarcação usa as operações individuais existentes de cancelamento e remarcação. Deseja confirmar?')){msg.textContent='Operação cancelada.';return}
+  if(!confirm('PRÉVIA — serão alteradas somente '+plano.length+' partida(s) pendente(s) em datas passadas, bloqueadas ou com excesso diário.\n'+(impossiveis.length?'Partidas sem remarcação automática: '+impossiveis.length+'.\n':'')+'\n'+resumo+'\n\nA remarcação usa as operações individuais existentes de cancelamento e remarcação. Deseja confirmar?')){msg.textContent='Operação cancelada.';return}
   let sucesso=0;const erros=[];
   for(const p of plano){
    msg.textContent='Remarcando '+(sucesso+erros.length+1)+' de '+plano.length+'...';
