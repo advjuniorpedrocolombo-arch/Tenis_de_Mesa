@@ -38,6 +38,7 @@ function doPost(e){
     if(a==='adminAtualizarParticipante'){const s=exigirSessao_(p.token);return jsonResponse_(adminAtualizarParticipante_(p,s.usuario));}
     if(a==='adminSalvarOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminSalvarOperador_(p,s.usuario));}
     if(a==='adminStatusOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminStatusOperador_(p,s.usuario));}
+    if(a==='adminEditarOperador'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminEditarOperador_(p,s.usuario));}
     if(a==='adminDefinirCabeca'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(adminDefinirCabeca_(p,s.usuario));}
     if(a==='sorteioIniciar'){const s=exigirSessao_(p.token,'ADMINISTRADOR');return jsonResponse_(iniciarSorteio_(p,s.usuario));}
     if(a==='sorteioAdicionar'){const s=exigirSessao_(p.token);return jsonResponse_(adicionarAoGrupo_(p,s.usuario));}
@@ -347,7 +348,13 @@ function adminEditarOperador_(d,usuario){
   if(op.email===usuario.email)return {ok:false,erro:'AUTO_EDICAO',mensagem:'A edição do próprio perfil administrativo está bloqueada por segurança.'};
   const sh=getSheet_(SHEETS.OPERADORES),idx=indexHeaders_(getHeaders_(sh));
   const anterior={nivel:op.nivel},novo={nivel};
-  sh.getRange(op.linha,idx.NIVEL_ACESSO+1).setValue(nivel);
+  const celulaNivel=sh.getRange(op.linha,idx.NIVEL_ACESSO+1);
+  const regra=celulaNivel.getDataValidation();
+  if(regra&&regra.getCriteriaType()===SpreadsheetApp.DataValidationCriteria.VALUE_IN_LIST){
+    const valores=regra.getCriteriaValues()[0].map(String);
+    if(!valores.includes(nivel))celulaNivel.setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList([...new Set([...valores,'ADMINISTRADOR','OPERADOR','FINANCEIRO'])],true).setAllowInvalid(false).build());
+  }
+  celulaNivel.setValue(nivel);
   if(pin){const salt=gerarSalt_();sh.getRange(op.linha,idx.PIN_SALT+1).setValue(salt);sh.getRange(op.linha,idx.PIN_HASH+1).setValue(hashPin_(salt,pin));novo.pinRedefinido=true;}
   registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'OPERADOR_EDITADO',entidade:'OPERADORES',idRegistro:id,valorAnterior:JSON.stringify(anterior),valorNovo:JSON.stringify(novo),observacoes:'Nível atualizado'+(pin?' e PIN redefinido':'')+'.'});
   return {ok:true,mensagem:'Cadastro atualizado. '+(pin?'O operador deverá usar o novo PIN.':'O PIN anterior foi preservado.')};
