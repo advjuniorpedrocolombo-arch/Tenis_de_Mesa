@@ -15,7 +15,7 @@
 <div class="rodape">Classificação geral calculada pela etapa alcançada no torneio e, entre participantes eliminados na mesma etapa, pelo desempenho na fase de grupos.</div>
 </main>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbxy3F09pwQVgSD2MFPwe3CjCTLulbnbfY_ElmM79IlwjjUKXBj0igI6VHvB4TMwqFPBaw/exec';
 let dados={jogos:[],classificacao:[],grupos:[],fasesGrupos:[],mataMata:[]},cat='';
 async function carregar(){msg.textContent='Atualizando...';try{const r=await fetch(API_URL+'?action=torneioPublico&_='+Date.now(),{cache:'no-store'}),d=await r.json();if(!d.ok)throw new Error(d.mensagem||d.erro);dados=d;render();msg.textContent='Atualizado.'}catch(e){msg.textContent='Erro: '+e.message}}
 function setCat(c){cat=c;btTodas.classList.toggle('ativo',!c);btMes.classList.toggle('ativo',c==='Mesatenistas');btRec.classList.toggle('ativo',c==='Recreativo');render()}
