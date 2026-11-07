@@ -16,6 +16,7 @@ function doGet(e){
     if(a==='adminOperadores'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,operadores:listarOperadores_()});}
     if(a==='sorteioEstado'){const s=exigirSessao_(e.parameter.token);return jsonResponse_({ok:true,usuario:s.usuario,estado:obterEstadoSorteio_(e.parameter.categoria)});}
     if(a==='jogosAdmin'){const s=exigirSessao_(e.parameter.token);return jsonResponse_({ok:true,usuario:s.usuario,jogos:listarJogos_(),classificacao:listarClassificacao_(),grupos:listarGruposPublicos_(),fasesGrupos:listarEstadosFasesGrupos_(),mataMata:listarMataMata_()});}
+    if(a==='mataMataPrevia'){exigirSessao_(e.parameter.token);const categoria=limparTexto_(e.parameter.categoria);if(!categoriasPermitidas_().includes(categoria))return jsonResponse_({ok:false,mensagem:'Categoria inválida.'});const estado=obterEstadoFaseGrupos_(categoria);if(!estado.podeEncerrar)return jsonResponse_({ok:false,mensagem:'Conclua todos os jogos desta categoria antes de gerar a prévia.'});const classificados=listarClassificacao_().filter(x=>x.categoria===categoria&&x.classificado);return jsonResponse_({ok:true,categoria,classificados:classificados.length,confrontos:montarConfrontosPrimeiraFase_(classificados)});}
     if(a==='adminEncerramentoEstado'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_(obterEstadoEncerramento_());}
     if(a==='adminArbitros'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,arbitros:listarArbitros_()});}
     if(a==='adminCalendario'){const s=exigirSessao_(e.parameter.token,'ADMINISTRADOR');return jsonResponse_({ok:true,usuario:s.usuario,datas:listarCalendario_()});}
@@ -253,17 +254,16 @@ function recalcularClassificacaoCategoria_(categoria){
   limparLinhasPorCategoria_(SHEETS.CLASSIFICACAO,categoria,'CATEGORIA');const membros=obterLinhasGrupo_(categoria),jogos=listarJogos_().filter(j=>j.categoria===categoria&&j.fase==='GRUPOS'&&j.status==='FINALIZADO'),porGrupo={},qtdClass=getClassificadosPorGrupo_(categoria),criterio=String(getConfig_('CRITERIOS_DESEMPATE')||'Vitórias > confronto direto > saldo de sets > saldo de pontos > sets vencidos > pontos marcados > sorteio');
   membros.forEach(m=>{if(!porGrupo[m.nomeGrupo])porGrupo[m.nomeGrupo]={};porGrupo[m.nomeGrupo][m.idParticipante]={categoria,grupo:m.nomeGrupo,id:m.idParticipante,nome:m.nomeParticipante,jogos:0,vitorias:0,derrotas:0,setsPro:0,setsContra:0,pontosPro:0,pontosContra:0}});
   jogos.forEach(j=>{const g=porGrupo[j.grupo];if(!g||!g[j.idA]||!g[j.idB])return;const a=g[j.idA],b=g[j.idB];a.jogos++;b.jogos++;if(j.tipoResultado!=='WO_DUPLO'){if(j.idVencedor===j.idA){a.vitorias++;b.derrotas++}else if(j.idVencedor===j.idB){b.vitorias++;a.derrotas++}}a.setsPro+=j.setsA;a.setsContra+=j.setsB;b.setsPro+=j.setsB;b.setsContra+=j.setsA;a.pontosPro+=j.pontosA;a.pontosContra+=j.pontosB;b.pontosPro+=j.pontosB;b.pontosContra+=j.pontosA});
-  const listasOrdenadas={};Object.keys(porGrupo).sort().forEach(grupo=>{const lista=Object.values(porGrupo[grupo]);ordenarClassificacaoGrupo_(lista,jogos.filter(j=>j.grupo===grupo));listasOrdenadas[grupo]=lista;});const tresGrupos=Object.keys(listasOrdenadas).length===3&&qtdClass===2;const melhoresTerceiros=new Set(tresGrupos?melhoresTerceirosTresGrupos_(listasOrdenadas):[]);Object.keys(listasOrdenadas).sort().forEach(grupo=>{const lista=listasOrdenadas[grupo];lista.forEach((x,i)=>{const saldoSets=x.setsPro-x.setsContra,saldoPontos=x.pontosPro-x.pontosContra,aprov=x.jogos?x.vitorias/x.jogos:0;gravarObjetoPrimeiraLinhaLivre_(SHEETS.CLASSIFICACAO,'CATEGORIA',{CATEGORIA:categoria,GRUPO:grupo,ID_PARTICIPANTE:x.id,NOME:x.nome,JOGOS:x.jogos,VITORIAS:x.vitorias,DERROTAS:x.derrotas,SETS_PRO:x.setsPro,SETS_CONTRA:x.setsContra,SALDO_SETS:saldoSets,PONTOS_PRO:x.pontosPro,PONTOS_CONTRA:x.pontosContra,SALDO_PONTOS:saldoPontos,APROVEITAMENTO:aprov,POSICAO:i+1,CLASSIFICADO:i<Math.min(qtdClass,lista.length)||melhoresTerceiros.has(String(x.id)),CRITERIO_DESEMPATE:criterio});});});
+  const listasOrdenadas={};Object.keys(porGrupo).sort().forEach(grupo=>{const lista=Object.values(porGrupo[grupo]);ordenarClassificacaoGrupo_(lista,jogos.filter(j=>j.grupo===grupo));listasOrdenadas[grupo]=lista;});const extras=categoria==='Recreativo'&&qtdClass===2?2:0;const melhoresTerceiros=new Set(extras?selecionarMelhoresTerceiros_(listasOrdenadas,extras):[]);Object.keys(listasOrdenadas).sort().forEach(grupo=>{const lista=listasOrdenadas[grupo];lista.forEach((x,i)=>{const saldoSets=x.setsPro-x.setsContra,saldoPontos=x.pontosPro-x.pontosContra,aprov=x.jogos?x.vitorias/x.jogos:0;gravarObjetoPrimeiraLinhaLivre_(SHEETS.CLASSIFICACAO,'CATEGORIA',{CATEGORIA:categoria,GRUPO:grupo,ID_PARTICIPANTE:x.id,NOME:x.nome,JOGOS:x.jogos,VITORIAS:x.vitorias,DERROTAS:x.derrotas,SETS_PRO:x.setsPro,SETS_CONTRA:x.setsContra,SALDO_SETS:saldoSets,PONTOS_PRO:x.pontosPro,PONTOS_CONTRA:x.pontosContra,SALDO_PONTOS:saldoPontos,APROVEITAMENTO:aprov,POSICAO:i+1,CLASSIFICADO:i<Math.min(qtdClass,lista.length)||melhoresTerceiros.has(String(x.id)),CRITERIO_DESEMPATE:criterio});});});
 }
-function melhoresTerceirosTresGrupos_(listas){
+function selecionarMelhoresTerceiros_(listas,quantidade){
   const terceiros=Object.values(listas).filter(x=>x.length>=3).map(x=>x[2]);
-  if(terceiros.length!==3)return [];
   return terceiros.sort((a,b)=>{
     const ra=a.jogos?a.vitorias/a.jogos:0,rb=b.jogos?b.vitorias/b.jogos:0;
     const sa=a.jogos?(a.setsPro-a.setsContra)/a.jogos:0,sb=b.jogos?(b.setsPro-b.setsContra)/b.jogos:0;
     const pa=a.jogos?(a.pontosPro-a.pontosContra)/a.jogos:0,pb=b.jogos?(b.pontosPro-b.pontosContra)/b.jogos:0;
-    return rb-ra||sb-sa||pb-pa||(b.setsPro-b.setsContra)-(a.setsPro-a.setsContra)||(b.pontosPro-b.pontosContra)-(a.pontosPro-a.pontosContra)||String(a.nome).localeCompare(String(b.nome),'pt-BR');
-  }).slice(0,2).map(x=>String(x.id));
+    return rb-ra||sb-sa||pb-pa||(b.setsPro-b.setsContra)-(a.setsPro-a.setsContra)||String(a.nome).localeCompare(String(b.nome),'pt-BR');
+  }).slice(0,quantidade).map(x=>String(x.id));
 }
 function ordenarClassificacaoGrupo_(lista,jogos){
   lista.sort((a,b)=>b.vitorias-a.vitorias);const saida=[];let i=0;
@@ -282,17 +282,50 @@ function listarEstadosFasesGrupos_(){return categoriasPermitidas_().map(obterEst
 function salvarConfigCategoria_(d,usuario){const categoria=limparTexto_(d.categoria),qtd=Number(d.classificadosPorGrupo);if(!categoriasPermitidas_().includes(categoria))return {ok:false,erro:'CATEGORIA_INVALIDA',mensagem:'Categoria inválida.'};const estado=obterEstadoFaseGrupos_(categoria);if(estado.encerrada)return {ok:false,erro:'FASE_ENCERRADA',mensagem:'Reabra a fase de grupos antes de alterar esta configuração.'};if(!Number.isInteger(qtd)||qtd<1)return {ok:false,erro:'VALOR_INVALIDO',mensagem:'Informe ao menos 1 classificado por grupo.'};if(estado.maxClassificados&&qtd>estado.maxClassificados)return {ok:false,erro:'VALOR_INVALIDO',mensagem:'Nesta categoria, o menor grupo possui '+estado.maxClassificados+' participante(s).'};const chave='CLASSIFICADOS_POR_GRUPO_'+configKeyCategoria_(categoria),ant=getConfig_(chave)||getConfig_('CLASSIFICADOS_POR_GRUPO');setConfig_(chave,qtd,'Quantidade que avança por grupo na categoria '+categoria+'; alterável sem mudar o código');recalcularClassificacaoCategoria_(categoria);registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'CONFIG_MATA_MATA_ALTERADA',entidade:'CONFIGURACOES',idRegistro:categoria,valorAnterior:String(ant),valorNovo:String(qtd),observacoes:'Classificados por grupo alterado.'});return {ok:true,mensagem:'Configuração atualizada. '+qtd+' participante(s) por grupo avançarão nesta categoria.'}}
 function encerrarFaseGrupos_(d,usuario){
   const categoria=limparTexto_(d.categoria);if(!categoriasPermitidas_().includes(categoria))return {ok:false,erro:'CATEGORIA_INVALIDA',mensagem:'Categoria inválida.'};const estado=obterEstadoFaseGrupos_(categoria);if(estado.encerrada)return {ok:false,erro:'FASE_JA_ENCERRADA',mensagem:'A fase de grupos desta categoria já foi encerrada.'};if(!estado.totalJogos)return {ok:false,erro:'SEM_JOGOS',mensagem:'Ainda não existem partidas de grupos nesta categoria.'};if(estado.jogosPendentes>0)return {ok:false,erro:'JOGOS_PENDENTES',mensagem:'Ainda faltam '+estado.jogosPendentes+' partida(s) desta categoria.'};
-  recalcularClassificacaoCategoria_(categoria);const classificados=listarClassificacao_().filter(x=>x.categoria===categoria&&x.classificado);if(classificados.length<2)return {ok:false,erro:'CLASSIFICADOS_INSUFICIENTES',mensagem:'É necessário ter pelo menos dois classificados para gerar o mata-mata.'};if(obterEstadoFaseGrupos_(categoria).grupos===3&&getClassificadosPorGrupo_(categoria)===2&&classificados.length!==8)return {ok:false,erro:'CHAVE_INCOMPLETA',mensagem:'Com três grupos, a chave deve ter exatamente oito classificados.'};gerarPrimeiraFaseMataMata_(categoria,classificados,usuario);registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'FASE_GRUPOS_ENCERRADA',entidade:'MATA_MATA',idRegistro:categoria,valorAnterior:'EM_ANDAMENTO',valorNovo:'ENCERRADA',observacoes:'Classificação congelada e mata-mata gerado sem aguardar a outra categoria.'});return {ok:true,mensagem:'Fase de grupos de '+categoria+' encerrada. O mata-mata foi gerado.',estado:obterEstadoFaseGrupos_(categoria),mataMata:listarMataMata_().filter(x=>x.categoria===categoria)};
+  recalcularClassificacaoCategoria_(categoria);const classificados=listarClassificacao_().filter(x=>x.categoria===categoria&&x.classificado);if(classificados.length<2)return {ok:false,erro:'CLASSIFICADOS_INSUFICIENTES',mensagem:'É necessário ter pelo menos dois classificados para gerar o mata-mata.'};const grupos=obterEstadoFaseGrupos_(categoria).grupos,esperados=grupos*getClassificadosPorGrupo_(categoria)+(categoria==='Recreativo'&&getClassificadosPorGrupo_(categoria)===2?Math.min(2,grupos):0);if(classificados.length!==esperados)return {ok:false,erro:'CHAVE_INCOMPLETA',mensagem:'Classificação inconsistente: esperados '+esperados+' participantes, encontrados '+classificados.length+'. Confira os grupos.'};gerarPrimeiraFaseMataMata_(categoria,classificados,usuario);registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'FASE_GRUPOS_ENCERRADA',entidade:'MATA_MATA',idRegistro:categoria,valorAnterior:'EM_ANDAMENTO',valorNovo:'ENCERRADA',observacoes:'Classificação congelada e mata-mata gerado sem aguardar a outra categoria.'});return {ok:true,mensagem:'Fase de grupos de '+categoria+' encerrada. O mata-mata foi gerado.',estado:obterEstadoFaseGrupos_(categoria),mataMata:listarMataMata_().filter(x=>x.categoria===categoria)};
 }
 function reabrirFaseGrupos_(d,usuario){const categoria=limparTexto_(d.categoria);if(!categoriasPermitidas_().includes(categoria))return {ok:false,erro:'CATEGORIA_INVALIDA',mensagem:'Categoria inválida.'};const estado=obterEstadoFaseGrupos_(categoria);if(!estado.encerrada)return {ok:false,erro:'FASE_NAO_ENCERRADA',mensagem:'A fase de grupos ainda não foi encerrada.'};if(!estado.podeReabrir)return {ok:false,erro:'MATA_MATA_JA_INICIADO',mensagem:'Já existe partida do mata-mata finalizada. A fase de grupos não pode ser reaberta automaticamente.'};limparJogosMataMataCategoria_(categoria);limparLinhasPorCategoria_(SHEETS.MATA_MATA,categoria,'CATEGORIA');recalcularClassificacaoCategoria_(categoria);registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'FASE_GRUPOS_REABERTA',entidade:'MATA_MATA',idRegistro:categoria,valorAnterior:'ENCERRADA',valorNovo:'EM_ANDAMENTO',observacoes:'Mata-mata ainda não iniciado foi removido para permitir correções.'});return {ok:true,mensagem:'Fase de grupos reaberta. Os resultados de grupo podem ser corrigidos novamente.'}}
 
+function ordemSeedsChave_(tamanho){
+  let lista=[1,2];
+  while(lista.length<tamanho){const n=lista.length*2;lista=lista.flatMap(x=>[x,n+1-x]);}
+  return lista;
+}
+function montarConfrontosPrimeiraFase_(classificados){
+  const ordenados=classificados.slice().sort(comparadorSeed_),q=ordenados.length;
+  if(q<2)throw new Error('Classificados insuficientes.');
+  const tamanho=proximaPotencia2_(q),ordem=ordemSeedsChave_(tamanho),slots=Array.from({length:tamanho},(_,i)=>ordenados[i]||null);
+  const custo=(a,b)=>{
+    if(!a||!b)return 0;
+    return (a.grupo===b.grupo?10000:0)+(a.posicao===1&&b.posicao===1?100:0)
+      +(a.posicao===2&&b.posicao===2?10:0)-(a.posicao===1&&b.posicao===3||b.posicao===1&&a.posicao===3?3:0);
+  };
+  const pontuacao=()=>ordem.reduce((sum,seed,i)=>i%2?sum+custo(slots[ordem[i-1]-1],slots[seed-1]):sum,0);
+  // Permuta apenas jogadores da mesma colocação; preserva os BYEs e o mérito esportivo.
+  let melhorou=true;
+  while(melhorou){melhorou=false;let atual=pontuacao();
+    for(let i=0;i<q;i++)for(let j=i+1;j<q;j++){
+      if(slots[i].posicao!==slots[j].posicao)continue;
+      [slots[i],slots[j]]=[slots[j],slots[i]];
+      const novo=pontuacao();
+      if(novo<atual){atual=novo;melhorou=true;}else [slots[i],slots[j]]=[slots[j],slots[i]];
+    }
+  }
+  const fase=fasePorQuantidade_(tamanho),saida=[];
+  for(let i=0;i<ordem.length;i+=2){
+    const a=slots[ordem[i]-1],b=slots[ordem[i+1]-1];
+    const titular=a||b,adversario=a&&b?b:null;
+    if(!titular)throw new Error('Chave inválida: confronto sem participantes.');
+    saida.push({fase,ordem:i/2+1,a:titular,b:adversario,origemA:titular.posicao+'º '+titular.grupo,origemB:adversario?adversario.posicao+'º '+adversario.grupo:'BYE'});
+  }
+  if(saida.some(c=>c.b&&c.a.grupo===c.b.grupo))throw new Error('Não foi possível montar uma primeira rodada sem confrontos do mesmo grupo. Verifique a quantidade de grupos.');
+  return saida;
+}
 function gerarPrimeiraFaseMataMata_(categoria,classificados,usuario){
+  const confrontos=montarConfrontosPrimeiraFase_(classificados);
   limparJogosMataMataCategoria_(categoria);limparLinhasPorCategoria_(SHEETS.MATA_MATA,categoria,'CATEGORIA');
-  const ordenados=classificados.slice().sort(comparadorSeed_),q=ordenados.length,tamanho=proximaPotencia2_(q),byes=tamanho-q,fase=fasePorQuantidade_(tamanho),restantes=ordenados.slice(),confrontos=[];
-  for(let i=0;i<byes;i++){const p=restantes.shift();confrontos.push({a:p,b:null,origemA:p.posicao+'º '+p.grupo,origemB:'BYE'});}
-  while(restantes.length){const a=restantes.shift();let k=-1;for(let i=restantes.length-1;i>=0;i--){if(restantes[i].grupo!==a.grupo){k=i;break}}if(k<0)k=restantes.length-1;const b=restantes.splice(k,1)[0];confrontos.push({a,b,origemA:a.posicao+'º '+a.grupo,origemB:b.posicao+'º '+b.grupo});}
-  confrontos.forEach((c,i)=>criarConfronto_(categoria,fase,i+1,c.a,c.b,c.origemA,c.origemB,'Primeira fase eliminatória gerada automaticamente.'));
-  if(confrontos.every(c=>!c.b))avancarMataMataSePronto_(categoria,fase,usuario);
+  confrontos.forEach(c=>criarConfronto_(categoria,c.fase,c.ordem,c.a,c.b,c.origemA,c.origemB,'Cruzamento entre grupos: cabeças de chave, melhores terceiros e BYEs distribuídos por desempenho.'));
+  if(confrontos.every(c=>!c.b))avancarMataMataSePronto_(categoria,confrontos[0].fase,usuario);
 }
 function comparadorSeed_(a,b){return a.posicao-b.posicao||b.vitorias-a.vitorias||b.saldoSets-a.saldoSets||b.saldoPontos-a.saldoPontos||String(a.nome).localeCompare(String(b.nome),'pt-BR')}
 function proximaPotencia2_(n){let p=1;while(p<n)p*=2;return p}
