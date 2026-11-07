@@ -8,7 +8,7 @@
 </style>
 </head>
 <body><!-- GUARDA_PERFIL_FINANCEIRO -->
-<script>(async()=>{const t=sessionStorage.getItem('tm_admin_token')||'';if(!t)return;try{const r=await fetch('https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec?action=adminSessao&token='+encodeURIComponent(t)+'&_='+Date.now(),{cache:'no-store'}),d=await r.json();if(d.ok&&String(d.usuario?.nivel||'').toUpperCase()==='FINANCEIRO'){location.replace('./financeiro.html');}}catch(_e){}})();</script>
+<script>(async()=>{const t=sessionStorage.getItem('tm_admin_token')||'';if(!t)return;try{const r=await fetch('https://script.google.com/macros/s/AKfycbxy3F09pwQVgSD2MFPwe3CjCTLulbnbfY_ElmM79IlwjjUKXBj0igI6VHvB4TMwqFPBaw/exec?action=adminSessao&token='+encodeURIComponent(t)+'&_='+Date.now(),{cache:'no-store'}),d=await r.json();if(d.ok&&String(d.usuario?.nivel||'').toUpperCase()==='FINANCEIRO'){location.replace('./financeiro.html');}}catch(_e){}})();</script>
 <div id="toast" class="toast oculto"></div>
 <header class="topo"><div class="linha"><div><h1>Sorteio dos Grupos</h1><p>Sorteio ao vivo • cabeças de chave definidos previamente</p></div><div class="acoes-topo"><span id="usuarioTopo"></span><a class="link" href="./index.html">Voltar ao painel</a></div></div></header>
 <main class="wrap">
@@ -23,7 +23,7 @@
 <section class="card" style="margin-top:16px"><h2>Participantes ainda não sorteados</h2><p>Quando o nome sair no sorteio ao vivo, clique no grupo correspondente.</p><div id="naoSorteados" class="nao-sorteados"></div></section>
 </main>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbxy3F09pwQVgSD2MFPwe3CjCTLulbnbfY_ElmM79IlwjjUKXBj0igI6VHvB4TMwqFPBaw/exec';
 let token=sessionStorage.getItem('tm_admin_token')||'',usuario=null,estado=null,ocupado=false,toastTimer=null;
 const post=async o=>{const b=new URLSearchParams(o),r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:b.toString()});return r.json()};
 function mostrarToast(texto,tipo='sucesso',tempo=3200){clearTimeout(toastTimer);toast.className='toast '+(tipo==='erro'?'erro-toast':tipo==='info'?'info-toast':'sucesso-toast');toast.innerHTML=texto;toast.classList.remove('oculto');toastTimer=setTimeout(()=>toast.classList.add('oculto'),tempo)}
