@@ -19,7 +19,7 @@
 <section id="secaoOperadores" class="secao oculto"><h2>Operadores do torneio</h2><div class="operador-grid"><div class="card operador-form"><h3>Novo operador</h3><label>Nome</label><input id="opNome"><label>E-mail</label><input id="opEmail" type="email"><label>PIN inicial</label><input id="opPin" type="password" inputmode="numeric" placeholder="mínimo 6 caracteres"><label>Nível de acesso</label><select id="opNivel"><option value="OPERADOR">OPERADOR</option><option value="FINANCEIRO">FINANCEIRO</option><option value="ADMINISTRADOR">ADMINISTRADOR</option></select><button onclick="salvarOperador()">Cadastrar operador</button><div id="opMsg" class="msg"></div></div><div class="tabela"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Nível</th><th>Status</th><th>Ação</th></tr></thead><tbody id="tbodyOps"></tbody></table></div></div></section>
 </section></main>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbxy3F09pwQVgSD2MFPwe3CjCTLulbnbfY_ElmM79IlwjjUKXBj0igI6VHvB4TMwqFPBaw/exec';
 let token=sessionStorage.getItem('tm_admin_token')||'';let usuario=null;let participantes=[];
 const post=async obj=>{const body=new URLSearchParams(obj);const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString()});return r.json()};
 async function iniciar(){if(!token)return mostrarLogin();try{const r=await fetch(API_URL+'?action=adminSessao&token='+encodeURIComponent(token)+'&_='+Date.now(),{cache:'no-store'});const d=await r.json();if(!d.ok)throw 0;usuario=d.usuario;abrirPainel()}catch(_){logout(false)}}
