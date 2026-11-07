@@ -12,7 +12,7 @@
 <section class="sec"><h2>Partidas por fase</h2><div id="jogos" class="jogos"></div></section>
 <section class="sec"><h2>Grupos</h2><div id="grupos" class="grid"></div></section></main>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';let dados={jogos:[],classificacao:[],grupos:[],fasesGrupos:[],mataMata:[]},cat='';let fasesPublicasRecolhidas=new Set(JSON.parse(sessionStorage.getItem('tm_publico_fases_recolhidas')||'[]'));let pwaPrompt=null;
+const API_URL='https://script.google.com/macros/s/AKfycbxy3F09pwQVgSD2MFPwe3CjCTLulbnbfY_ElmM79IlwjjUKXBj0igI6VHvB4TMwqFPBaw/exec';let dados={jogos:[],classificacao:[],grupos:[],fasesGrupos:[],mataMata:[]},cat='';let fasesPublicasRecolhidas=new Set(JSON.parse(sessionStorage.getItem('tm_publico_fases_recolhidas')||'[]'));let pwaPrompt=null;
 if('serviceWorker'in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}))}
 const btnInstalar=document.getElementById('btnInstalar');const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();pwaPrompt=e;if(!standalone)btnInstalar.style.display='inline-block'});
