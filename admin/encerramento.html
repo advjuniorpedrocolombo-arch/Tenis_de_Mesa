@@ -8,7 +8,7 @@
 </style>
 </head>
 <body><!-- GUARDA_PERFIL_FINANCEIRO -->
-<script>(async()=>{const t=sessionStorage.getItem('tm_admin_token')||'';if(!t)return;try{const r=await fetch('https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec?action=adminSessao&token='+encodeURIComponent(t)+'&_='+Date.now(),{cache:'no-store'}),d=await r.json();if(d.ok&&String(d.usuario?.nivel||'').toUpperCase()==='FINANCEIRO'){location.replace('./financeiro.html');}}catch(_e){}})();</script>
+<script>(async()=>{const t=sessionStorage.getItem('tm_admin_token')||'';if(!t)return;try{const r=await fetch('https://script.google.com/macros/s/AKfycbxy3F09pwQVgSD2MFPwe3CjCTLulbnbfY_ElmM79IlwjjUKXBj0igI6VHvB4TMwqFPBaw/exec?action=adminSessao&token='+encodeURIComponent(t)+'&_='+Date.now(),{cache:'no-store'}),d=await r.json();if(d.ok&&String(d.usuario?.nivel||'').toUpperCase()==='FINANCEIRO'){location.replace('./financeiro.html');}}catch(_e){}})();</script>
 <header class="topo"><div class="linha"><div><h1>Encerramento do Torneio</h1><p>Arquivo local, relatórios em PDF, proteção dos registros e reset mestre</p></div><div class="links"><a href="./index.html">Painel</a><a href="./partidas.html">Partidas</a><a href="./fases.html">Fases</a><a href="../resultado-final.html">Resultado Final</a></div></div></header>
 <main class="wrap">
 <div class="card status"><h2>Situação atual</h2><div id="statusBadge" class="badge warn">Carregando...</div><p id="statusTexto" class="meta"></p><div id="ultimoArquivo" class="meta"></div></div>
@@ -21,7 +21,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbxy3F09pwQVgSD2MFPwe3CjCTLulbnbfY_ElmM79IlwjjUKXBj0igI6VHvB4TMwqFPBaw/exec';
 let token=sessionStorage.getItem('tm_admin_token')||'',estado=null,usuario=null;
 const post=async obj=>{const body=new URLSearchParams(obj);const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:body.toString()});return r.json()};
 async function iniciar(){if(!token){location.href='./index.html';return}try{const s=await (await fetch(API_URL+'?action=adminSessao&token='+encodeURIComponent(token)+'&_='+Date.now(),{cache:'no-store'})).json();if(!s.ok||s.usuario?.nivel!=='ADMINISTRADOR')throw new Error('Somente administrador pode acessar esta área.');usuario=s.usuario;await carregarEstado()}catch(e){alert(e.message||'Sessão inválida.');location.href='./index.html'}}
