@@ -225,6 +225,7 @@ function salvarResultadoJogo_(d,usuario){
   const sh=getSheet_(SHEETS.JOGOS),h=getHeaders_(sh),idx=indexHeaders_(h),linha=localizarLinhaPorValor_(sh,idx.ID_JOGO+1,id);if(linha===-1)return {ok:false,erro:'JOGO_NAO_ENCONTRADO',mensagem:'Partida não encontrada.'};
   const r=sh.getRange(linha,1,1,h.length).getValues()[0],fase=String(r[idx.FASE]||''),categoria=String(r[idx.CATEGORIA]||''),statusAnterior=String(r[idx.STATUS]||''),melhorDe=melhorDePorFase_(fase);
   if(fase==='FINAL'){const terceiro=listarJogos_().find(j=>j.categoria===categoria&&String(j.fase).toUpperCase()==='TERCEIRO_LUGAR');if(terceiro&&terceiro.status!=='FINALIZADO')return {ok:false,erro:'TERCEIRO_LUGAR_PENDENTE',mensagem:'A disputa de 3º lugar deve ser realizada antes da final.'};}
+  if(fase==='FINAL'&&statusAnterior==='FINALIZADO'&&listarMataMata_().some(x=>x.fase==='GRANDE_FINAL'))return {ok:false,erro:'GRANDE_FINAL_GERADA',mensagem:'A Grande Final já foi gerada; não é permitido alterar a final de categoria sem revisão administrativa.'};
   if(fase==='GRUPOS'&&obterEstadoFaseGrupos_(categoria).encerrada)return {ok:false,erro:'FASE_GRUPOS_ENCERRADA',mensagem:'A fase de grupos desta categoria já foi encerrada. O administrador precisa reabri-la antes de corrigir resultados.'};
   if(statusAnterior==='FINALIZADO'&&fase!=='GRUPOS'){
     if(usuario.nivel!=='ADMINISTRADOR')return {ok:false,erro:'CORRECAO_RESTRITA',mensagem:'No mata-mata, somente o administrador pode corrigir uma partida finalizada.'};
@@ -233,7 +234,7 @@ function salvarResultadoJogo_(d,usuario){
   const anterior=serializarJogoLinha_(r,idx),resultado=montarResultado_(d,tipo,melhorDe,{idA:r[idx.ID_JOGADOR_A],nomeA:r[idx.JOGADOR_A],idB:r[idx.ID_JOGADOR_B],nomeB:r[idx.JOGADOR_B]});
   const campos={SET1_A:resultado.sets[0][0],SET1_B:resultado.sets[0][1],SET2_A:resultado.sets[1][0],SET2_B:resultado.sets[1][1],SET3_A:resultado.sets[2][0],SET3_B:resultado.sets[2][1],SETS_A:resultado.setsA,SETS_B:resultado.setsB,PONTOS_A:resultado.pontosA,PONTOS_B:resultado.pontosB,ID_VENCEDOR:resultado.idVencedor,VENCEDOR:resultado.vencedor,STATUS:'FINALIZADO',OPERADOR_LANCAMENTO:usuario.email,DATA_HORA_LANCAMENTO:new Date(),OBSERVACOES:limparTexto_(d.observacoes),SET4_A:resultado.sets[3][0],SET4_B:resultado.sets[3][1],SET5_A:resultado.sets[4][0],SET5_B:resultado.sets[4][1],TIPO_RESULTADO:tipo,MELHOR_DE:melhorDe};
   Object.keys(campos).forEach(k=>{if(idx[k]!==undefined)sh.getRange(linha,idx[k]+1).setValue(campos[k])});
-  if(fase==='GRUPOS')recalcularClassificacaoCategoria_(categoria);else{sincronizarConfrontoResultado_(id,resultado);avancarMataMataSePronto_(categoria,fase,usuario);}
+  if(fase==='GRUPOS')recalcularClassificacaoCategoria_(categoria);else{sincronizarConfrontoResultado_(id,resultado);avancarMataMataSePronto_(categoria,fase,usuario);if(fase==='FINAL')gerarGrandeFinalSePronta_(usuario);}
   registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:statusAnterior==='FINALIZADO'?'RESULTADO_CORRIGIDO':'RESULTADO_LANCADO',entidade:'JOGOS',idRegistro:id,valorAnterior:JSON.stringify(anterior),valorNovo:JSON.stringify(campos),observacoes:statusAnterior==='FINALIZADO'?'Resultado corrigido.':'Resultado finalizado.'});
   return {ok:true,mensagem:statusAnterior==='FINALIZADO'?'Resultado corrigido com sucesso.':'Partida finalizada com sucesso.',classificacao:listarClassificacao_().filter(x=>x.categoria===categoria&&x.grupo===String(r[idx.GRUPO])),mataMata:listarMataMata_().filter(x=>x.categoria===categoria)};
 }
@@ -419,3 +420,16 @@ function emailValido_(e){return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)}
 function gerarId_(prefixo){const d=Utilities.formatDate(new Date(),Session.getScriptTimeZone()||'America/Sao_Paulo','yyyyMMddHHmmss'),r=Math.floor(1000+Math.random()*9000);return prefixo+'-'+d+'-'+r}
 function jsonResponse_(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON)}
 function erroJson_(err){const m=String(err&&err.message?err.message:err),p=m.split('|');if(p.length>1)return jsonResponse_({ok:false,erro:p.shift(),mensagem:p.join('|')});return jsonResponse_({ok:false,erro:'ERRO_INTERNO',mensagem:m})}
+function gerarGrandeFinalSePronta_(usuario){
+  const chaves=listarMataMata_();
+  if(chaves.some(x=>String(x.fase).toUpperCase()==='GRANDE_FINAL'))return false;
+  const categorias=['Mesatenistas','Recreativo'];
+  const finais=categorias.map(c=>chaves.find(x=>x.categoria===c&&String(x.fase).toUpperCase()==='FINAL'&&['FINALIZADO','BYE'].includes(String(x.status).toUpperCase())&&x.idVencedor));
+  if(finais.some(x=>!x))return false;
+  if(String(finais[0].idVencedor)===String(finais[1].idVencedor))throw new Error('GRANDE_FINAL_INVALIDA|Os dois campeões possuem o mesmo ID.');
+  const a={id:finais[0].idVencedor,nome:finais[0].vencedor};
+  const b={id:finais[1].idVencedor,nome:finais[1].vencedor};
+  criarConfronto_('Grande Final','GRANDE_FINAL',1,a,b,'Campeão Mesatenistas','Campeão Recreativo','Decisão do campeão geral do torneio. Melhor de 5 sets.');
+  registrarHistorico_({usuario:usuario.email,perfil:usuario.nivel,acao:'GRANDE_FINAL_GERADA',entidade:'MATA_MATA',idRegistro:'Grande Final',valorAnterior:'',valorNovo:JSON.stringify({mesatenistas:a.id,recreativo:b.id}),observacoes:'Confronto único entre os dois campeões.'});
+  return true;
+}
