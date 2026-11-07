@@ -8,7 +8,7 @@
 </style>
 </head>
 <body><!-- GUARDA_PERFIL_FINANCEIRO -->
-<script>(async()=>{const t=sessionStorage.getItem('tm_admin_token')||'';if(!t)return;try{const r=await fetch('https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec?action=adminSessao&token='+encodeURIComponent(t)+'&_='+Date.now(),{cache:'no-store'}),d=await r.json();if(d.ok&&String(d.usuario?.nivel||'').toUpperCase()==='FINANCEIRO'){location.replace('./financeiro.html');}}catch(_e){}})();function horarioLegivel(v){if(v===null||v===undefined||v==='')return 'Horário a definir';const s=String(v).trim();const m=s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);if(m&&+m[1]<24&&+m[2]<60)return m[1].padStart(2,'0')+':'+m[2];if(/^1899-|^1900-|^\d{4}-\d\d-\d\dT/.test(s))return 'Horário a confirmar';return s;}</script>
+<script>(async()=>{const t=sessionStorage.getItem('tm_admin_token')||'';if(!t)return;try{const r=await fetch('https://script.google.com/macros/s/AKfycbxy3F09pwQVgSD2MFPwe3CjCTLulbnbfY_ElmM79IlwjjUKXBj0igI6VHvB4TMwqFPBaw/exec?action=adminSessao&token='+encodeURIComponent(t)+'&_='+Date.now(),{cache:'no-store'}),d=await r.json();if(d.ok&&String(d.usuario?.nivel||'').toUpperCase()==='FINANCEIRO'){location.replace('./financeiro.html');}}catch(_e){}})();function horarioLegivel(v){if(v===null||v===undefined||v==='')return 'Horário a definir';const s=String(v).trim();const m=s.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);if(m&&+m[1]<24&&+m[2]<60)return m[1].padStart(2,'0')+':'+m[2];if(/^1899-|^1900-|^\d{4}-\d\d-\d\dT/.test(s))return 'Horário a confirmar';return s;}</script>
 <header class="topo"><div class="linha"><div><h1>Calendário e Remarcações</h1><div style="color:#d1d5db;font-size:13px">Marque apenas os dias em que NÃO poderá haver jogos</div></div><div class="links"><a href="./index.html">Painel</a><a href="./arbitros.html">Árbitros</a><a href="./partidas.html">Partidas</a><a href="../agenda.html" target="_blank">Agenda pública</a></div></div></header>
 <main class="wrap">
 <div class="warn"><b>Nova regra:</b> todos os dias são considerados disponíveis por padrão. Você só precisa selecionar abaixo as datas em que o torneio não poderá ter partidas.</div>
@@ -35,7 +35,7 @@
 <section class="card sec"><h2>Partidas canceladas / remarcação</h2><div id="canceladas"></div><div id="msgRem" class="msg"></div></section>
 </main>
 <script>
-const API_URL='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';
+const API_URL='https://script.google.com/macros/s/AKfycbxy3F09pwQVgSD2MFPwe3CjCTLulbnbfY_ElmM79IlwjjUKXBj0igI6VHvB4TMwqFPBaw/exec';
 let token=sessionStorage.getItem('tm_admin_token')||'',cal=[],jogos=[],selecionadas=new Set(),mesAtual=new Date();
 const el=id=>document.getElementById(id);const post=async o=>{const b=new URLSearchParams(o),r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:b.toString()});return r.json()};
 async function iniciar(){if(!token)return location.href='./index.html';const s=await(await fetch(API_URL+'?action=adminSessao&token='+encodeURIComponent(token)+'&_='+Date.now(),{cache:'no-store'})).json();if(!s.ok||s.usuario?.nivel!=='ADMINISTRADOR'){alert('Acesso exclusivo do administrador.');location.href='./index.html';return}mesAtual=new Date();mesAtual.setDate(1);await carregar()}
