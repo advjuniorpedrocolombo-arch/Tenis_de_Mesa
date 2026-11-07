@@ -23,7 +23,7 @@
 <section class="card"><div class="toolbar"><h2 style="margin:0;flex:1">Histórico de períodos encerrados</h2><button class="btn prim" id="btnHistorico" type="button" onclick="alternarHistorico()">Mostrar histórico</button></div><p style="color:#64748b">Lançamentos anteriores ao último fechamento, preservados para auditoria e consulta.</p><div id="blocoHistorico" class="tabela oculto" style="box-shadow:none;margin:0"><table><thead><tr><th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th><th>Participante</th><th>Forma</th><th>Valor</th><th>Status</th><th>Operador</th></tr></thead><tbody id="tbodyHistorico"></tbody></table></div></section>
 </main>
 <script>
-const API='https://script.google.com/macros/s/AKfycbwYApgJFoSzBfLPuq40TjpVygwgzn6cEa7mEFioWG8SLN7owv2l_uSkvBLvNe2-16yzOg/exec';
+const API='https://script.google.com/macros/s/AKfycbxy3F09pwQVgSD2MFPwe3CjCTLulbnbfY_ElmM79IlwjjUKXBj0igI6VHvB4TMwqFPBaw/exec';
 let token=sessionStorage.getItem('tm_admin_token')||'',dados={participantes:[],caixa:[],resumo:{}},selecionados=new Set(),usuarioAtual=null,atualizando=false;
 const post=async o=>{const b=new URLSearchParams(o),r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},body:b.toString()});return r.json()};
 const moeda=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
